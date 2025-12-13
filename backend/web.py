@@ -8,6 +8,7 @@ app = Flask(__name__)
 # === CONFIGURATION ===
 VERIFY_TOKEN = "sanjay"  # Must match what you set in Meta dashboard
 WHATSAPP_TOKEN = "EAAjdxmX0ZA78BQFakg9MmOduZCiD9miOZCG80JlmZCiDA4Mc2KjjtJkL9JMGhy6BPB67mkJq5oLH1wXaew7ISa0ZA8atSl2tkBGvbmpz6XCuhY5ZCefOYrQkHkSrMWGBiZAjaBO0j3UGN61bE1vv7nb0jGofxYy4QYktM1XZCDJ6DvUYm30tie9bi4nIexfdZA4DYJU8dSoTtwt68nPqvuHqROClY99KEnCeO13jrT5V4mkbXLRzQMNHcFY0obiFGAos5ygZC3B4LI1nwiiZC0M2ZCgf"
+PHONE_NUMBER_ID = "929139663615397"
 
 # 🔑 IMPORTANT: Change this to your actual public URL or ngrok URL
 # Example: "https://your-app.onrender.com" or "https://abc123.ngrok.io"
