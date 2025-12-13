@@ -26,36 +26,78 @@ const CyberConsole = () => {
         setError(null);
         setData(null);
 
+        // SAMPLE DATA FOR DEMONSTRATION
+        const sampleData = {
+            "category_name": "Sextortion",
+            "gov_documents_to_submit": [
+                "Complaint form",
+                "Supporting evidence documents",
+                "Identity proof"
+            ],
+            "law_reference": [
+                {
+                    "act": "Computer Fraud and Abuse Act (CFAA)",
+                    "description": "Prohibits unauthorized access to computers and computer systems, which can be applied to sextortion cases involving hacking or unauthorized access.",
+                    "section": "18 U.S.C. § 1030",
+                    "title": "Fraud and related activity in connection with computers"
+                },
+                {
+                    "act": "Extortion and Threats",
+                    "description": "Makes it a crime to transmit threats or extortion demands across state or international borders.",
+                    "section": "18 U.S.C. § 875",
+                    "title": "Interstate communications"
+                }
+            ],
+            "possible_crimes": [],
+            "primary_category": "Sextortion",
+            "realistic_examples": [
+                "A person is threatened with the release of intimate images unless they pay a ransom.",
+                "An individual is coerced into performing sexual acts online after being blackmailed with compromising content.",
+                "A scammer demands money or gifts in exchange for not sharing explicit photos or videos."
+            ],
+            "reasoning": "The user is being threatened with explicit images and demanded payment, which directly fits the definition of Sextortion (Sexual Blackmail) as per the master list.",
+            "required_documents": [
+                "Police report",
+                "Copy of the threatening messages or emails",
+                "Any relevant communication records",
+                "Identification documents"
+            ],
+            "severity": "HIGH",
+            "what_happens_next": {
+                "attacker_next_steps": [
+                    "Send additional explicit images or more threatening messages to intimidate the victim",
+                    "Demand a higher payment or additional forms of payment (e.g., gift cards, cryptocurrency)",
+                    "Share the explicit material with the victim's social media contacts or wider networks if payment is not made"
+                ],
+                "immediate_actions_recommended": [
+                    "Do not engage with the attacker or pay the demanded amount",
+                    "Block the attacker on all social media platforms and report the incident to the platform's moderators",
+                    "Contact local law enforcement or a cybercrime reporting hotline for assistance"
+                ],
+                "risk_statistics": {
+                    "data_compromise_probability": "40%",
+                    "escalation_probability": "70%",
+                    "financial_loss_probability": "85%",
+                    "reputation_damage_probability": "90%"
+                },
+                "risk_timeline": {
+                    "24_hours": "The attacker may increase the frequency or severity of threats to prompt immediate payment. The victim's social media accounts may be hacked or used to spread the explicit material.",
+                    "48_hours": "The attacker could involve other scammers or share the victim's information on dark web platforms, potentially leading to identity theft or further extortion attempts.",
+                    "7_days": "If no payment is made, the attacker may release the explicit material publicly, leading to severe reputation damage and potential long-term consequences for the victim."
+                },
+                "warning_signs_to_watch": [
+                    "New, suspicious accounts contacting the victim with similar threats",
+                    "Increased online activity or posts from the victim's social media accounts that seem unauthorized"
+                ]
+            }
+        };
+
         try {
-            const formData = new FormData();
-
-            if (activeTab === 'image' && file) {
-                formData.append('file', file);
-            } else if (activeTab === 'audio' && file) {
-                formData.append('file', file);
-            } else if (activeTab === 'text' && complaint) {
-                formData.append('complaint', complaint);
-            } else {
-                setError(`Please provide ${activeTab} input`);
-                setLoading(false);
-                return;
-            }
-
-            const response = await fetch('http://localhost:5000/classify', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to classify complaint');
-            }
-
-            const result = await response.json();
-            // Simulating a delay for the "scanning" effect if the API is too fast
+            // SIMULATED API CALL
             setTimeout(() => {
-                setData(result);
+                setData(sampleData);
                 setLoading(false);
-            }, 1000);
+            }, 2000);
         } catch (err) {
             setError(err.message);
             setLoading(false);
@@ -70,6 +112,28 @@ const CyberConsole = () => {
             default: return 'text-gray-500 border-gray-500';
         }
     };
+
+    const calculateReadiness = () => {
+        let score = 0;
+        let missing = [];
+
+        if (activeTab === 'text') {
+            if (complaint.length > 10) score += 30;
+            if (complaint.length > 50) score += 30;
+            if (complaint.length > 100) score += 20;
+            if (complaint.length < 10) missing.push("Incident Description");
+        } else {
+            if (file) score += 80;
+            else missing.push("Evidence File");
+        }
+
+        // Base readiness just for being on the platform
+        score += 20;
+
+        return { score: Math.min(score, 100), missing };
+    };
+
+    const readiness = calculateReadiness();
 
     return (
         <div className="min-h-screen bg-black text-green-500 font-mono relative overflow-hidden selection:bg-green-500/30">
@@ -104,7 +168,7 @@ const CyberConsole = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Input Module */}
-                    <div className="lg:col-span-12 xl:col-span-5">
+                    <div className="lg:col-span-12 xl:col-span-5 h-fit xl:sticky xl:top-28">
                         <form onSubmit={handleSubmit} className="bg-black/50 border border-green-500/30 p-6 relative group hover:border-green-500/60 transition-colors duration-300">
                             {/* Decorative Corners */}
                             <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-green-500" />
@@ -245,7 +309,7 @@ const CyberConsole = () => {
 
                                 <button
                                     type="submit"
-                                    disabled={loading || (activeTab === 'text' && !complaint) || (activeTab !== 'text' && !file)}
+                                    disabled={loading}
                                     className="w-full relative overflow-hidden group/btn bg-green-600 hover:bg-green-500 disabled:bg-green-900/20 disabled:cursor-not-allowed transition-colors mt-8"
                                 >
                                     <div className="absolute inset-0 w-full h-full bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.1)_10px,rgba(0,0,0,0.1)_20px)] opacity-30" />
@@ -278,8 +342,8 @@ const CyberConsole = () => {
                         </form>
                     </div>
 
-                    {/* Results Display */}
-                    <div className="lg:col-span-12 xl:col-span-7">
+                    {/* Results Display - Summary Column */}
+                    <div className="lg:col-span-12 xl:col-span-7 space-y-6">
                         {loading && (
                             <div className="h-full min-h-[400px] border border-green-500/30 bg-black/50 p-6 flex flex-col items-center justify-center relative overflow-hidden">
                                 <div className="absolute inset-0 bg-green-500/5 animate-pulse" />
@@ -336,16 +400,34 @@ const CyberConsole = () => {
                                     </div>
                                 </div>
 
-                                {/* Doc Analysis HUD */}
+                                {/* Risk Statistics */}
+                                {data.what_happens_next?.risk_statistics && (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {Object.entries(data.what_happens_next.risk_statistics).map(([key, value]) => (
+                                            <div key={key} className="bg-green-900/10 border border-green-500/30 p-3 text-center">
+                                                <div className="text-xl font-bold text-white mb-1">{value}</div>
+                                                <div className="text-[10px] text-green-500/70 uppercase tracking-wider">{key.replace(/_/g, ' ')}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Doc Analysis HUD - Moved to Top Section to balance height */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Action Items */}
+                                    {/* Recommended Actions */}
                                     <div className="border border-green-500/30 bg-green-900/5 p-6">
                                         <h4 className="flex items-center gap-2 text-sm font-bold text-green-400 uppercase tracking-widest mb-4 border-b border-green-500/30 pb-2">
                                             <Shield className="w-4 h-4" />
-                                            REQUIRED_PROTOCOLS
+                                            RECOMMENDED_COUNTERMEASURES
                                         </h4>
                                         <ul className="space-y-3">
-                                            {data.required_documents?.map((doc, idx) => (
+                                            {data.what_happens_next?.immediate_actions_recommended?.map((action, idx) => (
+                                                <li key={idx} className="flex items-start gap-3 text-sm text-green-300">
+                                                    <span className="text-xs bg-red-900/50 border border-red-500/30 text-red-400 px-1.5 py-0.5 mt-0.5">PRIORITY</span>
+                                                    {action}
+                                                </li>
+                                            ))}
+                                            {!data.what_happens_next?.immediate_actions_recommended && data.required_documents?.map((doc, idx) => (
                                                 <li key={idx} className="flex items-start gap-3 text-sm text-green-300">
                                                     <span className="text-xs bg-green-900/50 border border-green-500/30 px-1.5 py-0.5 mt-0.5">{String(idx + 1).padStart(2, '0')}</span>
                                                     {doc}
@@ -354,7 +436,7 @@ const CyberConsole = () => {
                                         </ul>
                                     </div>
 
-                                    {/* Gov Docs */}
+                                    {/* Submission Manifest */}
                                     <div className="border border-green-500/30 bg-green-900/5 p-6">
                                         <h4 className="flex items-center gap-2 text-sm font-bold text-green-400 uppercase tracking-widest mb-4 border-b border-green-500/30 pb-2">
                                             <Upload className="w-4 h-4" />
@@ -370,62 +452,125 @@ const CyberConsole = () => {
                                         </ul>
                                     </div>
                                 </div>
-
-                                {/* AI Reasoning */}
-                                <div className="border border-green-500/30 bg-black/50 p-6 relative">
-                                    <div className="absolute -left-1 top-6 w-1 h-12 bg-green-500" />
-                                    <h4 className="text-sm font-bold text-green-400 uppercase tracking-widest mb-3">
-                                        NEURAL_NET_REASONING
-                                    </h4>
-                                    <p className="text-green-100/80 leading-relaxed font-mono text-sm border-l-2 border-green-900/50 pl-4">
-                                        {data.reasoning || "NO REASONING PROVIDED."}
-                                    </p>
-                                </div>
-
-                                {/* Realistic Examples */}
-                                {data.realistic_examples?.length > 0 && (
-                                    <div className="border border-green-500/20 p-4">
-                                        <button
-                                            onClick={() => setShowRealistic(!showRealistic)}
-                                            className="w-full flex items-center justify-between text-xs font-bold text-green-500 hover:text-green-400 transition-colors"
-                                        >
-                                            <span className="flex items-center gap-2">
-                                                <Info className="w-4 h-4" />
-                                                REALISTIC_SCENARIOS
-                                            </span>
-                                            <span>{showRealistic ? '[-]' : '[+]'}</span>
-                                        </button>
-
-                                        <AnimatePresence>
-                                            {showRealistic && (
-                                                <motion.div
-                                                    initial={{ height: 0, opacity: 0 }}
-                                                    animate={{ height: 'auto', opacity: 1 }}
-                                                    exit={{ height: 0, opacity: 0 }}
-                                                    className="overflow-hidden"
-                                                >
-                                                    <div className="pt-4 space-y-3">
-                                                        {data.realistic_examples.map((ex, i) => (
-                                                            <div key={i} className="bg-green-900/10 border border-green-500/10 p-3 text-sm text-green-300/80">
-                                                                {`>> ${ex}`}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                )}
                             </motion.div>
                         )}
-
-                        {!data && !loading && (
-                            <div className="h-full border border-green-500/10 bg-black/20 flex flex-col items-center justify-center text-green-900/30">
-                                <Lock className="w-16 h-16 mb-4 opacity-20" />
-                                <p className="font-mono text-sm tracking-widest">AWAITING_INPUT</p>
-                            </div>
-                        )}
                     </div>
+
+                    {/* Extended Results - Full Width Details */}
+                    {data && !loading && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="col-span-1 lg:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-6"
+                        >
+                            {/* Law Reference */}
+                            {data.law_reference?.length > 0 && (
+                                <div className="border border-green-500/30 bg-black/50 p-6 relative">
+                                    <h4 className="flex items-center gap-2 text-sm font-bold text-green-400 uppercase tracking-widest mb-4">
+                                        <Lock className="w-4 h-4" />
+                                        LEGAL_FRAMEWORK_VIOLATIONS
+                                    </h4>
+                                    <div className="space-y-4">
+                                        {data.law_reference.map((law, idx) => (
+                                            <div key={idx} className="bg-green-900/10 border border-green-500/20 p-4 hover:border-green-500/50 transition-colors">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="text-xs font-bold text-green-500 bg-green-900/30 px-2 py-1">{law.section}</span>
+                                                </div>
+                                                <h5 className="font-bold text-white text-sm mb-1">{law.act}</h5>
+                                                <p className="text-xs text-green-400/70 italic mb-2">"{law.title}"</p>
+                                                <p className="text-xs text-green-300 leading-relaxed">{law.description}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Threat Projection - Attacker Moves */}
+                            {data.what_happens_next?.attacker_next_steps && (
+                                <div className="border border-red-500/30 bg-red-900/5 p-6">
+                                    <h4 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <Activity className="w-4 h-4" />
+                                        PREDICTED_ATTACKER_MOVES
+                                    </h4>
+                                    <ul className="space-y-3">
+                                        {data.what_happens_next.attacker_next_steps.map((step, idx) => (
+                                            <li key={idx} className="flex items-start gap-3 text-sm text-red-300/80">
+                                                <span className="text-red-500 font-bold">{">>"}</span>
+                                                {step}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Threat Projection - Timeline */}
+                            {data.what_happens_next?.risk_timeline && (
+                                <div className="border border-green-500/30 bg-black/50 p-6">
+                                    <h4 className="text-sm font-bold text-green-400 uppercase tracking-widest mb-4">
+                                        RISK_ESCALATION_TIMELINE
+                                    </h4>
+                                    <div className="space-y-6 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-[1px] before:bg-green-500/30">
+                                        {Object.entries(data.what_happens_next.risk_timeline).map(([time, desc], idx) => (
+                                            <div key={idx} className="relative pl-6">
+                                                <div className="absolute left-0 top-1.5 w-3.5 h-3.5 bg-black border border-green-500 rounded-full flex items-center justify-center">
+                                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                                </div>
+                                                <span className="text-xs font-bold text-green-500 uppercase tracking-wider block mb-1">{time.replace(/_/g, ' ')}</span>
+                                                <p className="text-xs text-green-300/80 leading-relaxed">{desc}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* AI Reasoning */}
+                            <div className="border border-green-500/30 bg-black/50 p-6 relative">
+                                <div className="absolute -left-1 top-6 w-1 h-12 bg-green-500" />
+                                <h4 className="text-sm font-bold text-green-400 uppercase tracking-widest mb-3">
+                                    NEURAL_NET_REASONING
+                                </h4>
+                                <p className="text-green-100/80 leading-relaxed font-mono text-sm border-l-2 border-green-900/50 pl-4">
+                                    {data.reasoning || "NO REASONING PROVIDED."}
+                                </p>
+                            </div>
+
+                            {/* Realistic Examples */}
+                            {data.realistic_examples?.length > 0 && (
+                                <div className="lg:col-span-2 border border-green-500/20 p-4">
+                                    <button
+                                        onClick={() => setShowRealistic(!showRealistic)}
+                                        className="w-full flex items-center justify-between text-xs font-bold text-green-500 hover:text-green-400 transition-colors"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <Info className="w-4 h-4" />
+                                            REALISTIC_SCENARIOS
+                                        </span>
+                                        <span>{showRealistic ? '[-]' : '[+]'}</span>
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {showRealistic && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="pt-4 space-y-3">
+                                                    {data.realistic_examples.map((ex, i) => (
+                                                        <div key={i} className="bg-green-900/10 border border-green-500/10 p-3 text-sm text-green-300/80">
+                                                            {`>> ${ex}`}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
                 </div>
             </main>
         </div>
