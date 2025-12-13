@@ -1,0 +1,11 @@
+flask
+flask-cors
+langchain
+langchain-groq
+langgraph
+python-dotenv
+neo4j
+langchain-community
+langchain-openai
+langchain-core
+langchain-classic

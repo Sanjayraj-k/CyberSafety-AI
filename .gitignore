@@ -1,0 +1,5 @@
+backend/ai
+backend/.env
+client/node_modules
+backend/credentials.json
+backend/token.json

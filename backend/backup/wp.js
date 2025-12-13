@@ -1,0 +1,97 @@
+const express = require("express");
+const bodyParser = require("body-parser");
+const axios = require("axios");
+
+const app = express();
+app.use(bodyParser.json());
+
+// 🔑 Replace with your credentials
+const VERIFY_TOKEN = "sanjay"; // you choose
+const WHATSAPP_TOKEN = "EAAjdxmX0ZA78BQJM9zqMZA3Sb5bT5Y7sAV0spxaSUQItsCAGZB78ALxV2Gx0GWZC0yeLQDRtX0y18tP5M63JQCUWypacG6yXLlL44TFORq6CJvMuLL4cS1mOemAEijRxwEMoTSSkoeIaeCgoSlnB7GaGzm3gO3JmHbgupYLScD2HCziJgUcxEqDBfqLv8Mv5oYTxhc8oVLUJg1yh7fhwkJHJHw6rGIGAUI7iRgIjfSzo0xJI4YbIku0IXTppw7CT327S8QycSAAjtMU9CxZCm";
+const PHONE_NUMBER_ID = "929139663615397";
+
+// 🔑 Flask App URL (replace with your Flask app URL)
+const FLASK_APP_URL = "http://localhost:5000";
+
+// ✅ Webhook verification
+app.get("/webhook", (req, res) => {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+
+    if (mode === "subscribe" && token === VERIFY_TOKEN) {
+        console.log("✅ Webhook verified!");
+        res.status(200).send(challenge);
+    } else {
+        res.sendStatus(403);
+    }
+});
+
+// ✅ Handle incoming messages
+app.post("/webhook", async (req, res) => {
+    try {
+        const entry = req.body.entry?.[0];
+        const changes = entry?.changes?.[0]?.value?.messages?.[0];
+
+        if (changes && changes.text) {
+            const from = changes.from; // User's WhatsApp number
+            const msgBody = changes.text.body;
+
+            console.log("📩 User said:", msgBody);
+
+            // 🔮 Step 1: Send user's message to Flask app chatbot
+            const flaskRes = await axios.post(
+                `${FLASK_APP_URL}/whatsapp-ask`,
+                {
+                    question: msgBody,
+                    from: from  // Pass WhatsApp phone number for session management
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            const botReply = flaskRes.data.answer;
+            console.log("🤖 Bot reply:", botReply);
+
+            // 🔮 Step 2: Send Flask app response back via WhatsApp API
+            await axios.post(
+                `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`,
+                {
+                    messaging_product: "whatsapp",
+                    to: from,
+                    text: { body: botReply },
+                },
+                { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } }
+            );
+        }
+
+        res.sendStatus(200);
+    } catch (err) {
+        console.error("❌ Error:", err.response?.data || err.message);
+
+        // Send error message to user via WhatsApp
+        try {
+            await axios.post(
+                `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`,
+                {
+                    messaging_product: "whatsapp",
+                    to: changes?.from,
+                    text: { body: "❌ Sorry, I'm experiencing technical difficulties. Please try again later or contact support." },
+                },
+                { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } }
+            );
+        } catch (whatsappErr) {
+            console.error("❌ Failed to send error message:", whatsappErr.message);
+        }
+
+        res.sendStatus(500);
+    }
+});
+
+// ✅ Start server
+app.listen(3000, () => {
+    console.log("🚀 Server running on port 3000");
+});

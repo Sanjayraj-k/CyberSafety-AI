@@ -1,0 +1,328 @@
+from neo4j import GraphDatabase
+from langchain_community.vectorstores.neo4j_vector import Neo4jVector
+from langchain_openai import OpenAIEmbeddings
+from langchain_groq import ChatGroq
+from langchain_core.runnables import RunnablePassthrough
+from dotenv import load_dotenv
+from langchain_classic.chains.retrieval import create_retrieval_chain
+from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
+import os
+
+load_dotenv()
+
+NEO4J_URI = "neo4j+s://e617c76b.databases.neo4j.io"  # or neo4j+s://... for cloud
+NEO4J_USER = "neo4j"
+NEO4J_PASSWORD = "Me53Ykd8C5XTYEAw5bd54xCp3oNf6cyzhfXyfL9z2Po"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY") 
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+EMBEDDING_MODEL = "openai/text-embedding-3-small"
+
+documents = [
+    {"query": "I received an email from my bank asking me to confirm my login and OTP; is this a phishing attempt?", "category": "Phishing", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "An unknown contact on WhatsApp sent me a link and asked for my password and OTP", "category": "Phishing", "platform": "WhatsApp", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Got a text message claiming to be from my credit card company asking for card details", "category": "Phishing", "platform": "SMS", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "I was told to complete tasks online for Rs. 500 each and pay a small processing fee, but after doing them they blocked me", "category": "Task Scam", "platform": "Facebook", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Someone on Telegram promised me a salary for data entry tasks but asked for an advance fee", "category": "Task Scam", "platform": "Telegram", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Offered online gig work via Instagram with upfront fee, now no response after I paid", "category": "Task Scam", "platform": "Instagram", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "A stranger sent me a link to do microtasks for money but my account was blocked after I clicked it", "category": "Task Scam", "platform": "WhatsApp", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "Someone tricked me into sending money through UPI and now they’re not responding", "category": "Task Scam", "platform": "Google Pay", "severity": "High", "evidence_required": "Transaction ID"},
+    
+    {"query": "I shared private photos with someone who is now threatening to leak them unless I pay money", "category": "Sextortion", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Someone on Instagram stole my private images and is blackmailing me for money", "category": "Sextortion", "platform": "Instagram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Got a call from a person claiming to have my personal photos and demanding payment to delete them", "category": "Sextortion", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Unknown man on Telegram says he has secret pictures of me and will post them unless I pay ₹20,000", "category": "Sextortion", "platform": "Telegram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Scammer on Snapchat says he recorded me in a private video and threatens to leak it", "category": "Sextortion", "platform": "SnapChat", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "A seller on OLX sent me a UPI QR code that debited money from my account", "category": "OLX Scam", "platform": "WhatsApp", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "I sold my used phone online but the buyer’s UPI code drained my account", "category": "OLX Scam", "platform": "SMS", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "A person posing as a buyer on OLX got my money by sending a fake payment QR", "category": "OLX Scam", "platform": "WhatsApp", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "Someone used an OLX transaction link to steal money from my bank", "category": "OLX Scam", "platform": "Facebook", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "He asked me to scan a QR code for payment and then disappeared with Rs.5000", "category": "OLX Scam", "platform": "WhatsApp", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "I received a call from someone claiming customs found drugs in my FedEx package, demanding money", "category": "Fedex Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Stranger called me saying legal action will be taken due to a FedEx parcel, asked for payment", "category": "Fedex Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Got a message about a FedEx parcel tied to narcotics and police involvement", "category": "Fedex Scam", "platform": "SMS", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Scammer called saying I must pay 50k for issues with a FedEx delivery", "category": "Fedex Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Someone claimed to be Mumbai Cyber Cell about a FedEx delivery, demanded money over phone", "category": "Fedex Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "I got an email claiming I won ₹1,00,000 lottery and asked for a processing fee", "category": "Lottery Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Message says I won a prize but need to pay Rs.500 first to get it", "category": "Lottery Scam", "platform": "SMS", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "Someone called telling me I won a foreign lottery and need to send money", "category": "Lottery Scam", "platform": "Phone Call", "severity": "Medium", "evidence_required": "Call Recording"},
+    {"query": "I received a bogus notification that I won a sweepstakes and must pay to claim the money", "category": "Lottery Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Won a lottery I didn’t enter; now they want me to transfer a fee", "category": "Lottery Scam", "platform": "SMS", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "I applied on an instant loan app; they took ₹1000 as fee and never gave the loan", "category": "Instant Loan Scam", "platform": "Mobile App", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "Fake loan company called asking for a processing charge of ₹2000", "category": "Instant Loan Scam", "platform": "Phone Call", "severity": "Medium", "evidence_required": "Call Recording"},
+    {"query": "Loan app promised funds immediately after a ₹500 fee but closed my account", "category": "Instant Loan Scam", "platform": "SMS", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Received SMS from a lender asking for Aadhaar and bank details for an instant loan", "category": "Instant Loan Scam", "platform": "SMS", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "I downloaded a loan app that asked me to pay a fee for approval, but no loan came", "category": "Instant Loan Scam", "platform": "Mobile App", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "Someone called me claiming my phone service will be disconnected unless I pay immediately", "category": "Sim Card Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Got a message saying to update my SIM information by sending personal details", "category": "Sim Card Scam", "platform": "SMS", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Scammer posed as telecom support, asked for ID proof and fee to reactivate SIM", "category": "Sim Card Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Caller said all my SIMs would be cancelled unless I went through verification", "category": "Sim Card Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Received voicemail that telecom requires documentation update or lose connection", "category": "Sim Card Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Won a contest on Facebook but they asked for a shipping fee first", "category": "Fake Contest Scam", "platform": "Facebook", "severity": "Low", "evidence_required": "Screenshot"},
+    {"query": "Message congratulated me on a fake quiz win and requested my bank details", "category": "Fake Contest Scam", "platform": "WhatsApp", "severity": "Low", "evidence_required": "Chat History"},
+    {"query": "I received a message that I won an online contest, but need to share my details to claim the gift", "category": "Fake Contest Scam", "platform": "Email", "severity": "Low", "evidence_required": "Email Header"},
+    {"query": "Random pop-up said I won a prize and asked for my phone number", "category": "Fake Contest Scam", "platform": "Website", "severity": "Low", "evidence_required": "Screenshot"},
+    {"query": "Received notification of lottery win asking for a fee", "category": "Fake Contest Scam", "platform": "SMS", "severity": "Low", "evidence_required": "Screenshot"},
+    {"query": "Someone on Tinder is sending me romantic messages and asking for money", "category": "Romance Scam", "platform": "Tinder", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "I met someone online who now claims to love me and needs cash for an emergency abroad", "category": "Romance Scam", "platform": "Instagram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Stranger on Facebook Messenger professed love and asked to transfer ₹50,000", "category": "Romance Scam", "platform": "Facebook", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Met a person on an app, they won’t reply after I sent money to help their travel", "category": "Romance Scam", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Online dating match asked me for funds to get out of a crisis and now ignores me", "category": "Romance Scam", "platform": "Tinder", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "I found out someone opened a bank account in my name without my knowledge", "category": "Identity Theft", "platform": "Bank App", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Fraud alert: a loan is taken in my name with my personal details", "category": "Identity Theft", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "My passport and address proof were used by criminals to commit fraud", "category": "Identity Theft", "platform": "PhonePe", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Someone cloned my identity and applied for credit cards", "category": "Identity Theft", "platform": "Email", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Unauthorized accounts opened in my name and money withdrawn", "category": "Identity Theft", "platform": "Bank App", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "My computer turned on and showed a message all files are encrypted and I need to pay Bitcoin", "category": "Ransomware Attack", "platform": "Email", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "All office files are locked by a ransomware message demanding payment", "category": "Ransomware Attack", "platform": "Email", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "I clicked on a link and now my files are encrypted with a ransom note", "category": "Ransomware Attack", "platform": "Website", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Computer locked by malware; message says pay 0.5 BTC to get data back", "category": "Ransomware Attack", "platform": "Email", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Work laptop infected and all data held hostage with a ransom demand", "category": "Ransomware Attack", "platform": "Email", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Someone is posting my personal details and stalking me online through social media", "category": "Cyberstalking", "platform": "Instagram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "I feel like someone is tracking me by sending anonymous messages and watching me", "category": "Cyberstalking", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "An unknown person keeps tagging me in threatening posts", "category": "Cyberstalking", "platform": "Facebook", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "My ex appears to know my location and sends constant harassing texts", "category": "Cyberstalking", "platform": "SMS", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "They hacked my webcam and are claiming to have video evidence of me", "category": "Cyberstalking", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "I clicked on a link and my phone started installing unknown apps and showing ads", "category": "Malware Attack", "platform": "Email", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "My laptop got infected with a virus from a fake download", "category": "Malware Attack", "platform": "Website", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "Device infected by malware after visiting a suspicious site", "category": "Malware Attack", "platform": "Website", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "Antivirus popped up virus warnings after I downloaded a cracked app", "category": "Malware Attack", "platform": "Email", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "Phone screen keeps locking with fake antivirus alerts", "category": "Malware Attack", "platform": "SMS", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "I entered my bank login on a fake site and now lost access to my account", "category": "Fake Website", "platform": "Website", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Received a link that looked like Flipkart login but it took my credentials", "category": "Fake Website", "platform": "Email", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Scam website tricked me into entering credit card details", "category": "Fake Website", "platform": "Website", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "I fell for a fake Paytm page and lost money", "category": "Fake Website", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Fake government portal asked for login, now my details are stolen", "category": "Fake Website", "platform": "Email", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "A caller said I must pay a fee to inherit some money or I won’t get it", "category": "Advance Fee Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Someone asked for a processing fee to release a lottery prize I won", "category": "Advance Fee Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "I was told to pay a bribe to receive a government grant", "category": "Advance Fee Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Fake charity request: told to donate small fee first", "category": "Advance Fee Scam", "platform": "SMS", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Contacted to pay a tech support fee for a virus that doesn’t exist", "category": "Advance Fee Scam", "platform": "Popup", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "I got an email saying I must update my account via a link; it looks suspicious", "category": "Email Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Received a message about a refund with a link to enter my bank info", "category": "Email Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Email claims my account has issues and needs login verification", "category": "Email Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Phony email from Netflix asking to confirm payment method", "category": "Email Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Got a phishing email asking for OTP to fix billing problem", "category": "Email Scam", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Message says my courier couldn’t be delivered unless I pay Rs.50 to resend it", "category": "Fake Delivery Scam", "platform": "SMS", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "I got an email about a package delivery issue with a link to pay", "category": "Fake Delivery Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Caller claimed to be from logistics, asking for payment on delivery", "category": "Fake Delivery Scam", "platform": "Phone Call", "severity": "Medium", "evidence_required": "Call Recording"},
+    {"query": "A shipping scam message asked me to verify bank info for a parcel", "category": "Fake Delivery Scam", "platform": "SMS", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "Received fake DHL alert asking me to pay resend fee", "category": "Fake Delivery Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Man claiming to be police said I’m wanted for money laundering and demanded ₹10,000", "category": "Digital Arrest Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Caller posing as cyber cell officer threatened to arrest me unless I transfer funds", "category": "Digital Arrest Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Police scam call: accused me of cybercrime and asked for payment to clear name", "category": "Digital Arrest Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Got a text from fake police claiming fraud case pending and payment needed", "category": "Digital Arrest Scam", "platform": "SMS", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Threatened with arrest via email by someone impersonating cybercrime cell", "category": "Digital Arrest Scam", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Someone created a fake social media account using my name and photos", "category": "Impersonation Scam", "platform": "Facebook", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "An impostor is messaging my contacts asking for money pretending to be me", "category": "Impersonation Scam", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Fake profile of me is circulating and scamming people", "category": "Impersonation Scam", "platform": "Instagram", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Catfish set up a profile with my pictures and is harassing my friends", "category": "Impersonation Scam", "platform": "Instagram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Someone impersonated me in online dating to lure victims", "category": "Impersonation Scam", "platform": "Tinder", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "I got a message on Instagram from someone posing as support, asking to verify my account with login", "category": "Instagram Scam", "platform": "Instagram", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Fake Instagram message threatened to ban me if I didn’t enter credentials", "category": "Instagram Scam", "platform": "Instagram", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Scammer on Insta says my account is compromised, asks for details", "category": "Instagram Scam", "platform": "Instagram", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Received a suspicious Instagram DM from 'admin' asking me to update login", "category": "Instagram Scam", "platform": "Instagram", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Instagram support impersonator asked for my password via link", "category": "Instagram Scam", "platform": "Instagram", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "I paid for an online purchase but the seller never delivered the item", "category": "Online Shopping Scam", "platform": "Email", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Ordered from an unknown site and money got deducted but no product was sent", "category": "Online Shopping Scam", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Fake e-commerce site took my money for a phone but didn’t ship it", "category": "Online Shopping Scam", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Seller ghosted me after I paid for an online order", "category": "Online Shopping Scam", "platform": "Email", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Bought gaming account on forum, paid, but seller vanished", "category": "Online Shopping Scam", "platform": "Facebook", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "I applied for a scholarship and they asked me to pay an application fee", "category": "Scholarship Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Fake scholarship portal requested my personal and bank details", "category": "Scholarship Scam", "platform": "Website", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "Received an email about a scholarship and it seemed suspicious", "category": "Scholarship Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Paid a fee to apply for a scholarship but the institute doesn’t exist", "category": "Scholarship Scam", "platform": "Online", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "Scholarship scam: got a call asking for ₹500 processing charge", "category": "Scholarship Scam", "platform": "Phone Call", "severity": "Medium", "evidence_required": "Call Recording"},
+    {"query": "Saw a TikTok ad offering free cash if I sent a small registration fee", "category": "TikTok Scam", "platform": "TikTok", "severity": "Low", "evidence_required": "Screenshot"},
+    {"query": "Received a TikTok DM about a job with upfront payment", "category": "TikTok Scam", "platform": "TikTok", "severity": "Low", "evidence_required": "Chat History"},
+    {"query": "TikTok message claimed I won a prize and asked for my details", "category": "TikTok Scam", "platform": "TikTok", "severity": "Low", "evidence_required": "Chat History"},
+    {"query": "Got link from TikTok user promising easy money, now it's suspicious", "category": "TikTok Scam", "platform": "TikTok", "severity": "Low", "evidence_required": "Screenshot"},
+    {"query": "TikTok user asked me to share bank details for gift distribution", "category": "TikTok Scam", "platform": "TikTok", "severity": "Low", "evidence_required": "Chat History"},
+    {"query": "I booked a hotel online and after I paid, the travel site disappeared", "category": "Travel Booking Scam", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Fake airline ticket website took my money without sending the tickets", "category": "Travel Booking Scam", "platform": "Email", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Scam: Website sold me holiday package but wasn't real", "category": "Travel Booking Scam", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Paid via an app for a flight booking, now the app is gone", "category": "Travel Booking Scam", "platform": "Mobile App", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Fake travel agency online took advance, no booking made", "category": "Travel Booking Scam", "platform": "SMS", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Bought cryptocurrency on a new platform but now it’s disappeared", "category": "Fake Cryptocurrency Scam", "platform": "Telegram", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Invested in a crypto app promising high ROI; it shut down", "category": "Fake Cryptocurrency Scam", "platform": "Mobile App", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Scammer on Telegram lured me into a Bitcoin scheme and vanished", "category": "Fake Cryptocurrency Scam", "platform": "Telegram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Fake crypto exchange took my deposit of ₹20,000 and closed", "category": "Fake Cryptocurrency Scam", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Received a link to a fake crypto investment platform, lost funds", "category": "Fake Cryptocurrency Scam", "platform": "Email", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Paid for an online course that turned out to be a fraud", "category": "Fake Education Scam", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "I enrolled in a coaching center online, paid fee, now they are unreachable", "category": "Fake Education Scam", "platform": "Email", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Fake exam portal took my money for entrance test", "category": "Fake Education Scam", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Scammer offered me a guaranteed admission for ₹50,000 advance", "category": "Fake Education Scam", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Paid for fake university admission, classes never happened", "category": "Fake Education Scam", "platform": "Email", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Scam tech support call: paid ₹2000 to fix a virus that wasn’t there", "category": "Tech Support Scam", "platform": "Phone Call", "severity": "Medium", "evidence_required": "Call Recording"},
+    {"query": "Received a pop-up that my PC is infected, called number and lost money", "category": "Tech Support Scam", "platform": "Website", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "Fake IT support said they removed malware but charged fee", "category": "Tech Support Scam", "platform": "Phone Call", "severity": "Medium", "evidence_required": "Call Recording"},
+    {"query": "An email offered to clean my computer for a fee", "category": "Tech Support Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Called by someone claiming to be from Microsoft, they took money to 'fix' an issue", "category": "Tech Support Scam", "platform": "Phone Call", "severity": "Medium", "evidence_required": "Call Recording"},
+    {"query": "I got a call about an insurance I never bought, demanding payment or police involvement", "category": "Insurance Fraud", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Stranger said I have a pending claim and need to pay a fee", "category": "Insurance Fraud", "platform": "SMS", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Insurance scam: asked to pay for a policy I didn't apply for", "category": "Insurance Fraud", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Received fraudulent insurance renewal notice to extort money", "category": "Insurance Fraud", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Fake insurance agent demanded premium for a non-existent policy", "category": "Insurance Fraud", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "An attacker pretended to be bank staff and got my OTP and then emptied my account", "category": "Social Engineering", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Someone convinced me to send money by pretending to be a friend in trouble", "category": "Social Engineering", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "I was tricked into sharing my password over a call from someone claiming to be tech support", "category": "Social Engineering", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Caller pretended to be bank and got my OTP and card info", "category": "Social Engineering", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Scammer acted as relative in distress and asked me to transfer ₹10,000", "category": "Social Engineering", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Friend got me into a scheme promising 10% daily returns by recruiting others", "category": "Ponzi Scheme", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Investment group asked me to get more members to earn profits", "category": "Ponzi Scheme", "platform": "Telegram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Asked to pay money into a scheme that uses new investors to pay old ones", "category": "Ponzi Scheme", "platform": "Facebook", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Doubled my money by referring people, turned out a pyramid scam", "category": "Ponzi Scheme", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Online investment club collapsed after I paid in funds", "category": "Ponzi Scheme", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Deepfake video was made of me asking for money; the blackmailer is extorting me", "category": "Deepfake Scam", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Someone posted a fake clip of me on social media to scam my friends", "category": "Deepfake Scam", "platform": "Facebook", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Received video that looks like me confessing a crime; it's fake and threatening me", "category": "Deepfake Scam", "platform": "Telegram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Strangers made a deepfake to impersonate me for fraud", "category": "Deepfake Scam", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Fake video of me used to blackmail me", "category": "Deepfake Scam", "platform": "Email", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "A stranger on Snapchat tried to get inappropriate pictures from my daughter", "category": "Child Exploitation", "platform": "SnapChat", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Someone contacted my child asking for sexual images", "category": "Child Exploitation", "platform": "Instagram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Unknown adult is messaging minors on a game platform", "category": "Child Exploitation", "platform": "Online game platform", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Report: person grooming a child on social media", "category": "Child Exploitation", "platform": "Facebook", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Someone tried to meet my child through Snapchat with sexual intent", "category": "Child Exploitation", "platform": "SnapChat", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Downloaded a free app that charged my phone bill heavily", "category": "Mobile App Scam", "platform": "Google Play", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "An app kept asking for in-app purchases after installing", "category": "Mobile App Scam", "platform": "PhonePe", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "App asked for SMS verification and now my number is spammed", "category": "Mobile App Scam", "platform": "SMS", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Scam app installed malware on my phone", "category": "Mobile App Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Screenshot"},
+    {"query": "Fraud game app asked for card details illegally", "category": "Mobile App Scam", "platform": "Mobile App", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "Lost money on a fake online poker site", "category": "Online Gambling Scam", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Betting site took my deposit and won't pay out", "category": "Online Gambling Scam", "platform": "Email", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Scammed on a gambling forum, they disappeared with ₹1000", "category": "Online Gambling Scam", "platform": "Discord", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Fake casino app froze after I put in money", "category": "Online Gambling Scam", "platform": "Mobile App", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Won big but site asks extra fee before payout, feels like a scam", "category": "Online Gambling Scam", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Someone hacked into my email and is sending spam from my account", "category": "Email Hacking", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "I can’t access my email; the password was changed by someone", "category": "Email Hacking", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Received bounce-backs from emails I never sent", "category": "Email Hacking", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Notifications from my email about password change not done by me", "category": "Email Hacking", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "My Gmail is compromised and sending out malware", "category": "Email Hacking", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Learned a site I use had a data breach and my personal info is out there", "category": "Data Breach", "platform": "Website", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Hacker posted our company’s customer database online", "category": "Data Breach", "platform": "Website", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "My data appeared on a leaked list after an e-commerce hack", "category": "Data Breach", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Company report: confidential records stolen from servers", "category": "Data Breach", "platform": "Website", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Personal information leaked due to hospital database breach", "category": "Data Breach", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "I received an email threatening to release my data unless I pay ₹5,000", "category": "Cyber Extortion", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Hacker claims to have my credit card info, demanding money to avoid trouble", "category": "Cyber Extortion", "platform": "Phone Call", "severity": "High", "evidence_required": "Call Recording"},
+    {"query": "Extortion message on WhatsApp saying they have hacked my accounts", "category": "Cyber Extortion", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Ransom note locked my files, threatening to post them online", "category": "Cyber Extortion", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Stranger blackmailing me over chat with stolen photos", "category": "Cyber Extortion", "platform": "Telegram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Someone catfished me by pretending to be a celebrity online", "category": "Catfishing", "platform": "Instagram", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "I fell for a fake profile that was actually used to scam people", "category": "Catfishing", "platform": "Facebook", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "An online friend turned out to be fake and asked for money", "category": "Catfishing", "platform": "WhatsApp", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Someone pretended to be a known figure and tried to trick me", "category": "Catfishing", "platform": "Instagram", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Stranger used a fake identity to gain my trust and then cheated me", "category": "Catfishing", "platform": "Facebook", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Fake online pharmacy asked for my credit card to buy medicine", "category": "Pharma Scam", "platform": "SMS", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Email from a bogus pharma site offered miracle cure for ₹500", "category": "Pharma Scam", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Received a flyer for fake drugs sale online", "category": "Pharma Scam", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Scam ad selling expensive medicine at huge discount", "category": "Pharma Scam", "platform": "Facebook", "severity": "High", "evidence_required": "Screenshot"},
+    {"query": "Pharma website took payment but never shipped the medicines", "category": "Pharma Scam", "platform": "Online", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Gaming app promised coins but kept charging my account secretly", "category": "Gaming Scam", "platform": "Mobile App", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "Clicked game cheat link and lost my account password", "category": "Gaming Scam", "platform": "Online game platform", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Fake game developer emailed asking for card info to unlock skin", "category": "Gaming Scam", "platform": "Email", "severity": "Medium", "evidence_required": "Email Header"},
+    {"query": "Scam team member took money for tournament entry fee and disappeared", "category": "Gaming Scam", "platform": "WhatsApp", "severity": "Medium", "evidence_required": "Chat History"},
+    {"query": "Purchased game currency from unknown source, now can't log in", "category": "Gaming Scam", "platform": "Online game platform", "severity": "Medium", "evidence_required": "Transaction ID"},
+    {"query": "Sold my phone online, buyer filed false claim after payment", "category": "E-commerce Fraud", "platform": "Facebook", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Scam: buyer on marketplace reported non-delivery and got refund", "category": "E-commerce Fraud", "platform": "WhatsApp", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "I shipped goods to a scam buyer and he blocked me after saying it was faulty", "category": "E-commerce Fraud", "platform": "SMS", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Fake seller took payment and never delivered the item", "category": "E-commerce Fraud", "platform": "Website", "severity": "High", "evidence_required": "Transaction ID"},
+    {"query": "Bought gift card on e-commerce platform but code was invalid", "category": "E-commerce Fraud", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Donated to a crowdfunding site shared on social media; now the organizer vanished", "category": "Crowdfunding Scam", "platform": "Facebook", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Fake fundraiser ad on Instagram took my donation for relief", "category": "Crowdfunding Scam", "platform": "Instagram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Scam campaign collected funds on WhatsApp promises", "category": "Crowdfunding Scam", "platform": "WhatsApp", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Friend sent me a link to a bogus charity site asking donations", "category": "Crowdfunding Scam", "platform": "Telegram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Fake NGO ran campaign on social media to extort donations", "category": "Crowdfunding Scam", "platform": "Facebook", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "My Facebook account got taken over by someone who changed my password", "category": "Account Takeover", "platform": "Facebook", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "Now locked out of my Gmail – someone reset the password", "category": "Account Takeover", "platform": "Gmail", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Scammer gained access to my Instagram and is scamming friends", "category": "Account Takeover", "platform": "Instagram", "severity": "High", "evidence_required": "Chat History"},
+    {"query": "My Amazon account is sending orders I didn’t place", "category": "Account Takeover", "platform": "Email", "severity": "High", "evidence_required": "Email Header"},
+    {"query": "Got a notification that my account recovery email was changed", "category": "Account Takeover", "platform": "Email", "severity": "High", "evidence_required": "Email Header"}
+]
+
+# -------------------------
+# 🧱 Step 4: Ingest to Neo4j as Graph
+# -------------------------
+def ingest_documents_to_neo4j(documents):
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+    with driver.session() as session:
+        for doc in documents:
+            session.run(
+                """
+                MERGE (q:Query {text: $query})
+                MERGE (c:Category {name: $category})
+                MERGE (p:Platform {name: $platform})
+                MERGE (s:Severity {level: $severity})
+                MERGE (e:EvidenceType {name: $evidence_required})
+                MERGE (q)-[:HAS_CATEGORY]->(c)
+                MERGE (q)-[:ON_PLATFORM]->(p)
+                MERGE (q)-[:HAS_SEVERITY]->(s)
+                MERGE (q)-[:HAS_EVIDENCE]->(e)
+                """,
+                parameters=doc
+            )
+    driver.close()
+
+ingest_documents_to_neo4j(documents)
+
+# -------------------------
+# 🔍 Step 5: Create Vector Index with LangChain
+# -------------------------
+embeddings = OpenAIEmbeddings(
+    model=EMBEDDING_MODEL,
+    openai_api_key=OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1"
+)
+
+vector_index = Neo4jVector.from_existing_graph(
+    embeddings,
+    url=NEO4J_URI,
+    username=NEO4J_USER,
+    password=NEO4J_PASSWORD,
+    database="neo4j",
+    index_name="query_vector_index",
+    node_label="Query",
+    text_node_properties=["text"],
+    embedding_node_property="embedding"
+)
+
+
+llm = ChatGroq(
+    temperature=0,
+    model="llama-3.3-70b-versatile",
+    groq_api_key=GROQ_API_KEY
+)
+prompt = ChatPromptTemplate.from_messages([
+    ("system",
+     "You are a cybercrime classification assistant. Use ONLY the provided context "
+     "to answer the user's query. Do NOT hallucinate.\n\n"
+     "You MUST return the output strictly in the following JSON format:\n\n"
+     "{{\n"
+     "  'cybercrime_type': <category name>,\n"
+     "  'severity_level': <severity>,\n"
+     "  'platform': <platform>,\n"
+     "  'evidence_required': <evidence>,\n"
+     "  'summary': <2-line summary of the case>\n"
+     "}}\n\n"
+     "If the answer is not in the context, respond with:\n"
+     "{{ 'error': 'No relevant context found' }}\n\n"
+     "Context:\n{context}"
+    ),
+    ("human", "{input}")
+])
+
+# 3. Create the Document Chain (LLM + Prompt)
+# This chain handles formatting the retrieved docs into the prompt
+question_answer_chain = create_stuff_documents_chain(llm, prompt)
+
+# 4. Create the Retrieval Chain (Retriever + Document Chain)
+# This chain handles fetching data from Neo4j and passing it to the QA chain
+retriever = vector_index.as_retriever(search_kwargs={"k": 3})
+rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+
+# 5. Run the Chain
+user_question = "i got 20000 rupees click the below link to claim"
+response = rag_chain.invoke({"input": user_question})
+
+print("\nLLM Response:")
+print(response["answer"])
