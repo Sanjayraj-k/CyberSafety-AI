@@ -1,8 +1,24 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { MousePointer2, ArrowRight } from 'lucide-react';
 
 const Hero = () => {
+    const navigate = useNavigate();
+
+    // ✅ WhatsApp Business Redirect
+    const handleWhatsAppRedirect = () => {
+        const phoneNumber = "15551864905"; // +1 555 186 4905 (formatted)
+        const message = encodeURIComponent(
+            "Hello SentinelSOP Team, I need assistance with a cyber issue."
+        );
+
+        window.open(
+            `https://wa.me/${phoneNumber}?text=${message}`,
+            "_blank"
+        );
+    };
+
     return (
         <section className="relative pt-32 pb-24 lg:pt-48 lg:pb-32 overflow-hidden bg-transparent border-b-4 border-green-900">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -13,7 +29,6 @@ const Hero = () => {
                             animate={{ opacity: 1, x: 0 }}
                             className="flex items-center gap-3 mb-8"
                         >
-
                         </motion.div>
 
                         <motion.h1
@@ -40,11 +55,20 @@ const Hero = () => {
                             transition={{ delay: 0.3 }}
                             className="flex flex-wrap gap-4"
                         >
-                            <button className="px-8 py-4 bg-green-600 hover:bg-green-500 text-black font-mono text-sm tracking-wider flex items-center gap-3 group transition-all">
+                            {/* Web Console Button */}
+                            <button
+                                onClick={() => navigate('/console')}
+                                className="px-8 py-4 bg-green-600 hover:bg-green-500 text-black font-mono text-sm tracking-wider flex items-center gap-3 group transition-all"
+                            >
                                 INITIATE_WEB_SESSION
                                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                             </button>
-                            <button className="px-8 py-4 bg-black border border-green-900 hover:border-green-500 text-green-500 font-mono text-sm tracking-wider flex items-center gap-3 transition-all">
+
+                            {/* ✅ WhatsApp Button */}
+                            <button
+                                onClick={handleWhatsAppRedirect}
+                                className="px-8 py-4 bg-black border border-green-900 hover:border-green-500 text-green-500 font-mono text-sm tracking-wider flex items-center gap-3 transition-all"
+                            >
                                 CONNECT_WHATSAPP
                             </button>
                         </motion.div>
@@ -58,16 +82,29 @@ const Hero = () => {
                             </div>
                             <div className="w-full h-full border border-green-900/50 bg-black/50 relative overflow-hidden flex items-center justify-center">
                                 <div className="absolute inset-0 grid grid-cols-6 grid-rows-6 opacity-30 pointer-events-none">
-                                    {[...Array(36)].map((_, i) => <div key={i} className="border border-green-900/30" />)}
+                                    {[...Array(36)].map((_, i) => (
+                                        <div key={i} className="border border-green-900/30" />
+                                    ))}
                                 </div>
                                 <div className="relative z-10 p-6 bg-black border border-green-500 shadow-[0_0_30px_rgba(0,255,65,0.15)] max-w-[240px]">
                                     <div className="flex gap-2 mb-4">
                                         <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                                        <div className="font-mono text-[10px] text-green-600">INCIDENT ID: #9921</div>
+                                        <div className="font-mono text-[10px] text-green-600">
+                                            ISSUES: USER_ISSUES
+                                        </div>
                                     </div>
-                                    <div className="font-mono text-xs text-green-400 mb-2">{'>'} DETECTED: Phishing</div>
-                                    <div className="font-mono text-xs text-green-400 mb-2">{'>'} SOURCE: Email Gateway</div>
-                                    <div className="font-mono text-xs text-white">{'>'} ACTION: Execute SOP-99</div>
+                                    <div className="font-mono text-xs text-green-400 mb-2">
+                                        {'>'} DETECTED: Phishing
+                                    </div>
+                                    <div className="font-mono text-xs text-green-400 mb-2">
+                                        {'>'} THREAT: High
+                                    </div>
+                                    <div className="font-mono text-xs text-white">
+                                        {'>'} REQ PROOFS: Docs,Snaps
+                                    </div>
+                                    <div className="font-mono text-xs text-white">
+                                        {'>'} EXAMPLES: Related Examples
+                                    </div>
                                 </div>
 
                                 {/* Decorative Cursor */}
@@ -76,7 +113,10 @@ const Hero = () => {
                                     transition={{ repeat: Infinity, duration: 4 }}
                                     className="absolute top-1/4 left-1/4"
                                 >
-                                    <MousePointer2 className="text-green-500 fill-black" size={24} />
+                                    <MousePointer2
+                                        className="text-green-500 fill-black"
+                                        size={24}
+                                    />
                                 </motion.div>
                             </div>
                         </div>
