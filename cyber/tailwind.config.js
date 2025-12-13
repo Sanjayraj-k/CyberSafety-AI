@@ -8,17 +8,18 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
-        mono: ['Space Grotesk', 'monospace'], // Using Space Grotesk for "mono" slot for headings/tech feel
+        mono: ['Space Grotesk', 'monospace'],
       },
       colors: {
         cyber: {
-          blue: '#0055FF', // Sharper electric blue
-          dark: '#0F172A',
-          grey: '#F1F5F9',
+          blue: '#00FF41', // Matrix Green (renaming variable but keeping key for compatibility initially, or swapping value)
+          green: '#00FF41',
+          dark: '#000000',
+          grey: '#111111',
         }
       },
       backgroundImage: {
-        'grid-pattern': "linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)",
+        'grid-pattern': "linear-gradient(to right, #003300 1px, transparent 1px), linear-gradient(to bottom, #003300 1px, transparent 1px)",
       }
     },
   },

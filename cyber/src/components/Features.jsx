@@ -9,17 +9,17 @@ import {
 } from 'lucide-react';
 
 const FeatureTile = ({ title, desc, icon: Icon, span = 1 }) => (
-    <div className={`tech-card p-8 ${span === 2 ? 'md:col-span-2' : ''}`}>
+    <div className={`tech-card p-8 ${span === 2 ? 'md:col-span-2' : ''} bg-zinc-950/80 backdrop-blur-sm`}>
         <div className="flex justify-between items-start mb-6">
-            <div className="p-3 bg-slate-50 border border-slate-200">
-                <Icon size={20} className="text-slate-900" />
+            <div className="p-3 bg-green-900/10 border border-green-900/50">
+                <Icon size={20} className="text-green-500" />
             </div>
-            <div className="font-mono text-[10px] text-slate-400">
+            <div className="font-mono text-[10px] text-green-700">
                 MOD_{title.replace(/\s/g, '_').toUpperCase().slice(0, 8)}
             </div>
         </div>
-        <h3 className="font-mono font-bold text-xl mb-3">{title}</h3>
-        <p className="text-slate-600 text-sm leading-relaxed">
+        <h3 className="font-mono font-bold text-xl mb-3 text-white">{title}</h3>
+        <p className="text-green-400/70 text-sm leading-relaxed">
             {desc}
         </p>
     </div>
@@ -27,11 +27,11 @@ const FeatureTile = ({ title, desc, icon: Icon, span = 1 }) => (
 
 const Features = () => {
     return (
-        <section id="features" className="py-24 bg-slate-50/50">
+        <section id="features" className="py-24 bg-transparent border-b-4 border-green-900">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="mb-16">
-                    <span className="mono-tag mb-2 block">System Capabilities</span>
-                    <h2 className="font-mono text-3xl font-bold">KEY INNOVATIONS</h2>
+                    <span className="mono-tag mb-2 block text-green-600">System Capabilities</span>
+                    <h2 className="font-mono text-3xl font-bold text-white">KEY INNOVATIONS</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
