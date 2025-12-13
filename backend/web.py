@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # === CONFIGURATION ===
 VERIFY_TOKEN = "sanjay"  # Must match what you set in Meta dashboard
-WHATSAPP_TOKEN = "EAAjdxmX0ZA78BQFakg9MmOduZCiD9miOZCG80JlmZCiDA4Mc2KjjtJkL9JMGhy6BPB67mkJq5oLH1wXaew7ISa0ZA8atSl2tkBGvbmpz6XCuhY5ZCefOYrQkHkSrMWGBiZAjaBO0j3UGN61bE1vv7nb0jGofxYy4QYktM1XZCDJ6DvUYm30tie9bi4nIexfdZA4DYJU8dSoTtwt68nPqvuHqROClY99KEnCeO13jrT5V4mkbXLRzQMNHcFY0obiFGAos5ygZC3B4LI1nwiiZC0M2ZCgf"
+WHATSAPP_TOKEN = "EAAjdxmX0ZA78BQLnZCLsZAiO9rr6yjbfEb9Vt6F4JRmhnORtqJglH5xk9HAsxvBKfbHg5fuEOwrgDZCnpYQqZAdsxgZBLnZCXGdZAMl4hZCJPg6NpUiVcyEso6yXeviZAYEz7sWwR60oxQx8q8NPlU6ECqHWvYK4F4cGJae2a1Tz9zee8r75cUJkCclFhx48WPKGVvjgD3TZCT0QIcpthnZAs1cEuvy4wTVSZBGUYb7DwXirZAZAiYTV774q5x24NX6zRuVRCm6ZC1hSM2NeXN1AZAaZBgBBOd"
 PHONE_NUMBER_ID = "929139663615397"
 
 # 🔑 IMPORTANT: Change this to your actual public URL or ngrok URL
@@ -60,39 +60,137 @@ def receive_message():
             response.raise_for_status()
             bot_data = response.json()
 
-            # Extract the reply text — customize based on your response structure
-            # You can make this smarter later (e.g., format lists nicely)
+            # === ENHANCED MESSAGE FORMATTING ===
+            
+            # Severity Emoji
+            severity = bot_data.get('severity', 'MEDIUM').upper()
+            severity_emoji = "🔴" if severity == "HIGH" else ("🟡" if severity == "MEDIUM" else "🟢")
+            
             # Format Law References
-            law_references = bot_data.get('law_reference', ['Not available'])
+            law_references = bot_data.get('law_reference', [])
             formatted_laws = []
             for doc in law_references:
                 if isinstance(doc, dict):
-                    # Act/Section in Bold, Description in Italics on next line
-                    formatted_laws.append(f"⚖️ *{doc.get('act', '')} {doc.get('section', '')}*\n_{doc.get('description', '')}_")
+                    formatted_laws.append(f"⚖️ *{doc.get('act', '')}* ({doc.get('section', '')})\n   _{doc.get('description', '')}_")
                 else:
                     formatted_laws.append(f"⚖️ {doc}")
-
+            
+            # Format Threat Prediction
+            what_happens_next = bot_data.get('what_happens_next', {})
+            attacker_steps = what_happens_next.get('attacker_next_steps', [])
+            risk_timeline = what_happens_next.get('risk_timeline', {})
+            risk_stats = what_happens_next.get('risk_statistics', {})
+            immediate_actions = what_happens_next.get('immediate_actions_recommended', [])
+            warning_signs = what_happens_next.get('warning_signs_to_watch', [])
+            
+            # Format Complaint Portals
+            complaint_portals = bot_data.get('complaint_portals', [])
+            formatted_portals = []
+            for portal in complaint_portals:
+                if isinstance(portal, dict):
+                    formatted_portals.append(f"🌐 *{portal.get('name', '')}*\n   {portal.get('url', '')}")
+            
+            # Build the main message
             reply_text = (
-                f"🚨 *DETECTED CRIME* 🚨\n"
-                f"``` {bot_data.get('primary_category', 'Unknown').upper()} ```\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"🚨 *CYBERCRIME ANALYSIS* 🚨\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n\n"
                 
-                f"🧐 _Reasoning_\n"
-                f"> {bot_data.get('reasoning', 'Unknown')}\n\n"
+                f"🎯 *DETECTED CRIME*\n"
+                f"```{bot_data.get('primary_category', 'Unknown').upper()}```\n\n"
                 
-                f"� *REQUIRED DOCUMENTS*\n" +
-                "\n".join([f"• {doc}" for doc in bot_data.get('required_documents', ['Not available'])]) +
-                "\n\n" +
+                f"{severity_emoji} *SEVERITY:* {severity}\n\n"
                 
-                f"🏛️ *GOV. SUBMISSIONS*\n" +
-                "\n".join([f"• {doc}" for doc in bot_data.get('gov_documents_to_submit', ['Not available'])]) +
-                "\n\n" +
+                f"🧠 *AI REASONING*\n"
+                f"_{bot_data.get('reasoning', 'No reasoning available.')}_\n\n"
+            )
+            
+            # Add Required Documents
+            req_docs = bot_data.get('required_documents', [])
+            if req_docs:
+                reply_text += f"📋 *REQUIRED DOCUMENTS*\n"
+                reply_text += "\n".join([f"  • {doc}" for doc in req_docs]) + "\n\n"
+            
+            # Add Government Submissions
+            gov_docs = bot_data.get('gov_documents_to_submit', [])
+            if gov_docs:
+                reply_text += f"🏛️ *GOVERNMENT SUBMISSIONS*\n"
+                reply_text += "\n".join([f"  • {doc}" for doc in gov_docs]) + "\n\n"
+            
+            # Add Law References
+            if formatted_laws:
+                reply_text += f"📚 *APPLICABLE LAWS*\n"
+                reply_text += "\n".join(formatted_laws) + "\n\n"
+            
+            # === THREAT PREDICTION SECTION ===
+            if attacker_steps or risk_timeline:
+                reply_text += (
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                    f"🔮 *WHAT HAPPENS NEXT?*\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                )
                 
-                f"� *REALISTIC EXAMPLES*\n" +
-                "\n".join([f"• _{doc}_" for doc in bot_data.get('realistic_examples', ['Not available'])]) +
-                "\n\n" +
+                # Attacker Next Steps
+                if attacker_steps:
+                    reply_text += f"⚠️ *ATTACKER'S LIKELY MOVES:*\n"
+                    for step in attacker_steps:
+                        reply_text += f"  🔸 {step}\n"
+                    reply_text += "\n"
                 
-                f"� *LAW REFERENCES*\n" +
-                "\n".join(formatted_laws)
+                # Risk Timeline
+                if risk_timeline:
+                    reply_text += f"⏰ *RISK TIMELINE:*\n"
+                    if risk_timeline.get('24_hours'):
+                        reply_text += f"  🟡 *24 HRS:* {risk_timeline['24_hours']}\n"
+                    if risk_timeline.get('48_hours'):
+                        reply_text += f"  🟠 *48 HRS:* {risk_timeline['48_hours']}\n"
+                    if risk_timeline.get('7_days'):
+                        reply_text += f"  🔴 *7 DAYS:* {risk_timeline['7_days']}\n"
+                    reply_text += "\n"
+                
+                # Risk Statistics
+                if risk_stats:
+                    reply_text += f"📊 *RISK ASSESSMENT:*\n"
+                    if risk_stats.get('financial_loss_probability'):
+                        reply_text += f"  💰 Financial Loss: {risk_stats['financial_loss_probability']}\n"
+                    if risk_stats.get('reputation_damage_probability'):
+                        reply_text += f"  😰 Reputation Damage: {risk_stats['reputation_damage_probability']}\n"
+                    if risk_stats.get('escalation_probability'):
+                        reply_text += f"  📈 Escalation Risk: {risk_stats['escalation_probability']}\n"
+                    reply_text += "\n"
+                
+                # Warning Signs
+                if warning_signs:
+                    reply_text += f"👁️ *WARNING SIGNS TO WATCH:*\n"
+                    for sign in warning_signs:
+                        reply_text += f"  ⚡ {sign}\n"
+                    reply_text += "\n"
+            
+            # === IMMEDIATE ACTIONS ===
+            if immediate_actions:
+                reply_text += (
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                    f"✅ *TAKE ACTION NOW*\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                )
+                for action in immediate_actions:
+                    reply_text += f"  ✓ {action}\n"
+                reply_text += "\n"
+            
+            # === COMPLAINT PORTALS ===
+            if formatted_portals:
+                reply_text += (
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                    f"🔗 *FILE COMPLAINT HERE*\n"
+                    f"━━━━━━━━━━━━━━━━━━━━\n"
+                )
+                reply_text += "\n".join(formatted_portals) + "\n\n"
+            
+            # Footer
+            reply_text += (
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"💡 _This is an AI analysis. Please verify with authorities._\n"
+                f"🆘 *Emergency:* cybercrime.gov.in | 1930"
             )
 
             if bot_data.get("error"):

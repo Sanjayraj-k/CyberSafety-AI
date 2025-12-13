@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, AlertTriangle, FileText, Upload, CheckCircle, Info, Send, Loader, Terminal as TerminalIcon, Lock, Activity, Image as ImageIcon, Mic, Scale, Target, Clock, TrendingUp, Eye, Zap, AlertOctagon } from 'lucide-react';
+import { Shield, AlertTriangle, FileText, Upload, CheckCircle, Info, Send, Loader, Terminal as TerminalIcon, Lock, Activity, Image as ImageIcon, Mic, Scale, Target, Clock, TrendingUp, Eye, Zap, AlertOctagon, ExternalLink, Globe, Calendar } from 'lucide-react';
 import Navbar from './Navbar';
 
 const CyberConsole = () => {
@@ -11,7 +11,18 @@ const CyberConsole = () => {
     const [error, setError] = useState(null);
     const [showRealistic, setShowRealistic] = useState(false);
     const [showLawRef, setShowLawRef] = useState(false);
-    const [showThreatPrediction, setShowThreatPrediction] = useState(true); // Default open for prominence
+
+
+    // Interactive Flow State
+    const [showThreats, setShowThreats] = useState(false);
+    const [showPortals, setShowPortals] = useState(false);
+    const [currentQuestion, setCurrentQuestion] = useState('THREATS'); // 'THREATS', 'PORTALS', 'CALENDAR', 'NONE'
+
+    // Calendar State
+    const [calendarEmail, setCalendarEmail] = useState('');
+    const [scheduleStatus, setScheduleStatus] = useState('idle');
+    const [showCalendar, setShowCalendar] = useState(false);
+
     const [activeTab, setActiveTab] = useState('text'); // 'text', 'image', 'audio'
 
     const handleFileChange = (e) => {
@@ -19,6 +30,30 @@ const CyberConsole = () => {
         if (selectedFile) {
             setFile(selectedFile);
             setComplaint('');
+        }
+    };
+
+    const handleSchedule = async () => {
+        if (!calendarEmail) return;
+        setScheduleStatus('loading');
+        try {
+            const response = await fetch('http://localhost:5000/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: calendarEmail,
+                    category: data.primary_category,
+                    severity: data.severity
+                }),
+            });
+            const result = await response.json();
+            if (response.ok) {
+                setScheduleStatus('success');
+            } else {
+                setScheduleStatus('error');
+            }
+        } catch (error) {
+            setScheduleStatus('error');
         }
     };
 
@@ -56,6 +91,14 @@ const CyberConsole = () => {
             // Simulating a delay for the "scanning" effect if the API is too fast
             setTimeout(() => {
                 setData(result);
+                // Reset Interaction Flow
+                setShowThreats(false);
+                setShowPortals(false);
+                setShowPortals(false);
+                setShowCalendar(false);
+                setCalendarEmail('');
+                setScheduleStatus('idle');
+                setCurrentQuestion('THREATS');
                 setLoading(false);
             }, 1000);
         } catch (err) {
@@ -408,173 +451,35 @@ const CyberConsole = () => {
                                     </p>
                                 </div>
 
-                                {/* 🔥 What Happens Next - Threat Prediction */}
-                                {data.what_happens_next && (
-                                    <div className="bg-gradient-to-br from-red-950/40 via-orange-950/30 to-gray-900/60 border border-red-500/30 rounded-xl backdrop-blur-sm overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.1)]">
+                                {/* Realistic Examples */}
+                                {data.realistic_examples?.length > 0 && (
+                                    <div className="bg-gray-900/60 border border-gray-700 rounded-xl backdrop-blur-sm overflow-hidden">
                                         <button
-                                            onClick={() => setShowThreatPrediction(!showThreatPrediction)}
-                                            className="w-full flex items-center justify-between p-5 hover:bg-red-950/30 transition-colors"
+                                            onClick={() => setShowRealistic(!showRealistic)}
+                                            className="w-full flex items-center justify-between p-5 hover:bg-gray-800/50 transition-colors"
                                         >
-                                            <span className="flex items-center gap-3 text-sm font-bold text-red-400 uppercase tracking-widest">
-                                                <div className="p-2 bg-red-500/20 rounded-lg animate-pulse">
-                                                    <AlertOctagon className="w-5 h-5" />
-                                                </div>
-                                                🔮 What Will Happen Next?
+                                            <span className="flex items-center gap-2 text-sm font-bold text-blue-400 uppercase tracking-widest">
+                                                <Info className="w-4 h-4" />
+                                                Realistic Examples ({data.realistic_examples.length})
                                             </span>
-                                            <span className="text-red-400 text-lg">{showThreatPrediction ? '−' : '+'}</span>
+                                            <span className="text-gray-500 text-lg">{showRealistic ? '−' : '+'}</span>
                                         </button>
 
                                         <AnimatePresence>
-                                            {showThreatPrediction && (
+                                            {showRealistic && (
                                                 <motion.div
                                                     initial={{ height: 0, opacity: 0 }}
                                                     animate={{ height: 'auto', opacity: 1 }}
                                                     exit={{ height: 0, opacity: 0 }}
                                                     className="overflow-hidden"
                                                 >
-                                                    <div className="p-5 pt-0 space-y-5">
-
-                                                        {/* Attacker Next Steps */}
-                                                        {data.what_happens_next.attacker_next_steps?.length > 0 && (
-                                                            <div className="bg-black/40 border border-red-500/20 p-4 rounded-lg">
-                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-red-400 mb-3">
-                                                                    <Target className="w-4 h-4" />
-                                                                    Likely Next Steps by Attacker
-                                                                </h5>
-                                                                <ul className="space-y-2">
-                                                                    {data.what_happens_next.attacker_next_steps.map((step, i) => (
-                                                                        <motion.li
-                                                                            key={i}
-                                                                            initial={{ opacity: 0, x: -10 }}
-                                                                            animate={{ opacity: 1, x: 0 }}
-                                                                            transition={{ delay: i * 0.1 }}
-                                                                            className="flex items-start gap-3 text-sm text-gray-300"
-                                                                        >
-                                                                            <span className="text-red-500 mt-1">•</span>
-                                                                            <span>{step}</span>
-                                                                        </motion.li>
-                                                                    ))}
-                                                                </ul>
+                                                    <div className="p-5 pt-0 space-y-3">
+                                                        {data.realistic_examples.map((ex, i) => (
+                                                            <div key={i} className="bg-blue-950/20 border border-blue-500/20 p-4 rounded-lg text-gray-300 text-sm leading-relaxed">
+                                                                <span className="text-blue-400 mr-2">{i + 1}.</span>
+                                                                {ex}
                                                             </div>
-                                                        )}
-
-                                                        {/* Risk Timeline */}
-                                                        {data.what_happens_next.risk_timeline && Object.keys(data.what_happens_next.risk_timeline).length > 0 && (
-                                                            <div className="bg-black/40 border border-orange-500/20 p-4 rounded-lg">
-                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-orange-400 mb-4">
-                                                                    <Clock className="w-4 h-4" />
-                                                                    Risk Escalation Timeline
-                                                                </h5>
-                                                                <div className="space-y-3">
-                                                                    {data.what_happens_next.risk_timeline['24_hours'] && (
-                                                                        <div className="flex gap-3">
-                                                                            <div className="flex-shrink-0 w-16 px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-center">
-                                                                                <span className="text-xs font-bold text-yellow-400">24 HRS</span>
-                                                                            </div>
-                                                                            <p className="text-sm text-gray-300">{data.what_happens_next.risk_timeline['24_hours']}</p>
-                                                                        </div>
-                                                                    )}
-                                                                    {data.what_happens_next.risk_timeline['48_hours'] && (
-                                                                        <div className="flex gap-3">
-                                                                            <div className="flex-shrink-0 w-16 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded text-center">
-                                                                                <span className="text-xs font-bold text-orange-400">48 HRS</span>
-                                                                            </div>
-                                                                            <p className="text-sm text-gray-300">{data.what_happens_next.risk_timeline['48_hours']}</p>
-                                                                        </div>
-                                                                    )}
-                                                                    {data.what_happens_next.risk_timeline['7_days'] && (
-                                                                        <div className="flex gap-3">
-                                                                            <div className="flex-shrink-0 w-16 px-2 py-1 bg-red-500/20 border border-red-500/30 rounded text-center">
-                                                                                <span className="text-xs font-bold text-red-400">7 DAYS</span>
-                                                                            </div>
-                                                                            <p className="text-sm text-gray-300">{data.what_happens_next.risk_timeline['7_days']}</p>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Risk Statistics */}
-                                                        {data.what_happens_next.risk_statistics && Object.keys(data.what_happens_next.risk_statistics).length > 0 && (
-                                                            <div className="bg-black/40 border border-purple-500/20 p-4 rounded-lg">
-                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-purple-400 mb-4">
-                                                                    <TrendingUp className="w-4 h-4" />
-                                                                    Risk Statistics
-                                                                </h5>
-                                                                <div className="grid grid-cols-2 gap-3">
-                                                                    {Object.entries(data.what_happens_next.risk_statistics).map(([key, value], i) => {
-                                                                        const percentage = parseInt(value) || 0;
-                                                                        const label = key.replace(/_/g, ' ').replace('probability', '').trim();
-                                                                        const colors = [
-                                                                            { bg: 'bg-red-500', border: 'border-red-500/30', text: 'text-red-400' },
-                                                                            { bg: 'bg-orange-500', border: 'border-orange-500/30', text: 'text-orange-400' },
-                                                                            { bg: 'bg-yellow-500', border: 'border-yellow-500/30', text: 'text-yellow-400' },
-                                                                            { bg: 'bg-purple-500', border: 'border-purple-500/30', text: 'text-purple-400' },
-                                                                        ];
-                                                                        const color = colors[i % colors.length];
-
-                                                                        return (
-                                                                            <div key={key} className={`bg-gray-900/50 border ${color.border} p-3 rounded-lg`}>
-                                                                                <div className="flex justify-between items-center mb-2">
-                                                                                    <span className="text-xs text-gray-400 uppercase">{label}</span>
-                                                                                    <span className={`text-sm font-bold ${color.text}`}>{value}</span>
-                                                                                </div>
-                                                                                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                                                                                    <motion.div
-                                                                                        initial={{ width: 0 }}
-                                                                                        animate={{ width: `${percentage}%` }}
-                                                                                        transition={{ duration: 1, delay: i * 0.2 }}
-                                                                                        className={`h-full ${color.bg} rounded-full shadow-[0_0_10px_currentColor]`}
-                                                                                    />
-                                                                                </div>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Immediate Actions Recommended */}
-                                                        {data.what_happens_next.immediate_actions_recommended?.length > 0 && (
-                                                            <div className="bg-green-950/30 border border-green-500/30 p-4 rounded-lg">
-                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-green-400 mb-3">
-                                                                    <Zap className="w-4 h-4" />
-                                                                    Immediate Actions Recommended
-                                                                </h5>
-                                                                <ul className="space-y-2">
-                                                                    {data.what_happens_next.immediate_actions_recommended.map((action, i) => (
-                                                                        <motion.li
-                                                                            key={i}
-                                                                            initial={{ opacity: 0, x: -10 }}
-                                                                            animate={{ opacity: 1, x: 0 }}
-                                                                            transition={{ delay: i * 0.1 }}
-                                                                            className="flex items-start gap-3 text-sm text-gray-300"
-                                                                        >
-                                                                            <CheckCircle className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                                                                            <span>{action}</span>
-                                                                        </motion.li>
-                                                                    ))}
-                                                                </ul>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Warning Signs to Watch */}
-                                                        {data.what_happens_next.warning_signs_to_watch?.length > 0 && (
-                                                            <div className="bg-yellow-950/20 border border-yellow-500/20 p-4 rounded-lg">
-                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-yellow-400 mb-3">
-                                                                    <Eye className="w-4 h-4" />
-                                                                    Warning Signs to Watch
-                                                                </h5>
-                                                                <ul className="space-y-2">
-                                                                    {data.what_happens_next.warning_signs_to_watch.map((sign, i) => (
-                                                                        <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
-                                                                            <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
-                                                                            <span>{sign}</span>
-                                                                        </li>
-                                                                    ))}
-                                                                </ul>
-                                                            </div>
-                                                        )}
+                                                        ))}
                                                     </div>
                                                 </motion.div>
                                             )}
@@ -582,7 +487,7 @@ const CyberConsole = () => {
                                     </div>
                                 )}
 
-                                {/* Law References - Collapsible */}
+                                {/* Law References */}
                                 {data.law_reference?.length > 0 && (
                                     <div className="bg-gray-900/60 border border-gray-700 rounded-xl backdrop-blur-sm overflow-hidden">
                                         <button
@@ -622,40 +527,345 @@ const CyberConsole = () => {
                                     </div>
                                 )}
 
-                                {/* Realistic Examples - Collapsible */}
-                                {data.realistic_examples?.length > 0 && (
-                                    <div className="bg-gray-900/60 border border-gray-700 rounded-xl backdrop-blur-sm overflow-hidden">
-                                        <button
-                                            onClick={() => setShowRealistic(!showRealistic)}
-                                            className="w-full flex items-center justify-between p-5 hover:bg-gray-800/50 transition-colors"
-                                        >
-                                            <span className="flex items-center gap-2 text-sm font-bold text-blue-400 uppercase tracking-widest">
-                                                <Info className="w-4 h-4" />
-                                                Realistic Examples ({data.realistic_examples.length})
-                                            </span>
-                                            <span className="text-gray-500 text-lg">{showRealistic ? '−' : '+'}</span>
-                                        </button>
+                                {/* --- INTERACTIVE FLOW --- */}
 
+                                {/* 1. QUESTION: THREATS */}
+                                {currentQuestion === 'THREATS' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="bg-black/60 border border-red-500/40 p-6 rounded-xl flex flex-col items-center text-center gap-4 shadow-[0_0_20px_rgba(239,68,68,0.15)] mt-4"
+                                    >
+                                        <div className="p-3 bg-red-500/10 rounded-full animate-pulse">
+                                            <AlertOctagon className="w-8 h-8 text-red-500" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white">Predict Hacker's Next Move?</h3>
+                                        <p className="text-gray-400 text-sm max-w-md">
+                                            Our AI can analyze patterns to predict the likely next steps of the attacker and the risk timeline.
+                                        </p>
+                                        <div className="flex gap-4 w-full max-w-xs mt-2">
+                                            <button
+                                                onClick={() => { setShowThreats(true); setCurrentQuestion('PORTALS'); }}
+                                                className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-lg transition-all"
+                                            >
+                                                YES
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowThreats(false); setCurrentQuestion('PORTALS'); }}
+                                                className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-lg transition-all"
+                                            >
+                                                NO
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* 🔥 Threat Prediction Section */}
+                                {showThreats && data.what_happens_next && (
+                                    <div className="bg-gradient-to-br from-red-950/40 via-orange-950/30 to-gray-900/60 border border-red-500/30 rounded-xl backdrop-blur-sm overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.1)] mt-4">
+                                        <div className="p-5 border-b border-red-500/20 bg-red-950/20">
+                                            <span className="flex items-center gap-3 text-sm font-bold text-red-400 uppercase tracking-widest">
+                                                <div className="p-2 bg-red-500/20 rounded-lg">
+                                                    <AlertOctagon className="w-5 h-5" />
+                                                </div>
+                                                🔮 Threat Prediction & Risk Analysis
+                                            </span>
+                                        </div>
+
+                                        <div className="p-5 space-y-5">
+                                            {/* Attacker Next Steps */}
+                                            {data.what_happens_next.attacker_next_steps?.length > 0 && (
+                                                <div className="bg-black/40 border border-red-500/20 p-4 rounded-lg">
+                                                    <h5 className="flex items-center gap-2 text-sm font-bold text-red-400 mb-3">
+                                                        <Target className="w-4 h-4" />
+                                                        Likely Next Steps by Attacker
+                                                    </h5>
+                                                    <ul className="space-y-2">
+                                                        {data.what_happens_next.attacker_next_steps.map((step, i) => (
+                                                            <motion.li
+                                                                key={i}
+                                                                initial={{ opacity: 0, x: -10 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                transition={{ delay: i * 0.1 }}
+                                                                className="flex items-start gap-3 text-sm text-gray-300"
+                                                            >
+                                                                <span className="text-red-500 mt-1">•</span>
+                                                                <span>{step}</span>
+                                                            </motion.li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {/* Risk Timeline */}
+                                            {data.what_happens_next.risk_timeline && Object.keys(data.what_happens_next.risk_timeline).length > 0 && (
+                                                <div className="bg-black/40 border border-orange-500/20 p-4 rounded-lg">
+                                                    <h5 className="flex items-center gap-2 text-sm font-bold text-orange-400 mb-4">
+                                                        <Clock className="w-4 h-4" />
+                                                        Risk Escalation Timeline
+                                                    </h5>
+                                                    <div className="space-y-3">
+                                                        {data.what_happens_next.risk_timeline['24_hours'] && (
+                                                            <div className="flex gap-3">
+                                                                <div className="flex-shrink-0 w-16 px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-center">
+                                                                    <span className="text-xs font-bold text-yellow-400">24 HRS</span>
+                                                                </div>
+                                                                <p className="text-sm text-gray-300">{data.what_happens_next.risk_timeline['24_hours']}</p>
+                                                            </div>
+                                                        )}
+                                                        {data.what_happens_next.risk_timeline['48_hours'] && (
+                                                            <div className="flex gap-3">
+                                                                <div className="flex-shrink-0 w-16 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded text-center">
+                                                                    <span className="text-xs font-bold text-orange-400">48 HRS</span>
+                                                                </div>
+                                                                <p className="text-sm text-gray-300">{data.what_happens_next.risk_timeline['48_hours']}</p>
+                                                            </div>
+                                                        )}
+                                                        {data.what_happens_next.risk_timeline['7_days'] && (
+                                                            <div className="flex gap-3">
+                                                                <div className="flex-shrink-0 w-16 px-2 py-1 bg-red-500/20 border border-red-500/30 rounded text-center">
+                                                                    <span className="text-xs font-bold text-red-400">7 DAYS</span>
+                                                                </div>
+                                                                <p className="text-sm text-gray-300">{data.what_happens_next.risk_timeline['7_days']}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Risk Statistics */}
+                                            {data.what_happens_next.risk_statistics && Object.keys(data.what_happens_next.risk_statistics).length > 0 && (
+                                                <div className="bg-black/40 border border-purple-500/20 p-4 rounded-lg">
+                                                    <h5 className="flex items-center gap-2 text-sm font-bold text-purple-400 mb-4">
+                                                        <TrendingUp className="w-4 h-4" />
+                                                        Risk Statistics
+                                                    </h5>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        {Object.entries(data.what_happens_next.risk_statistics).map(([key, value], i) => {
+                                                            const percentage = parseInt(value) || 0;
+                                                            const label = key.replace(/_/g, ' ').replace('probability', '').trim();
+                                                            const colors = [
+                                                                { bg: 'bg-red-500', border: 'border-red-500/30', text: 'text-red-400' },
+                                                                { bg: 'bg-orange-500', border: 'border-orange-500/30', text: 'text-orange-400' },
+                                                                { bg: 'bg-yellow-500', border: 'border-yellow-500/30', text: 'text-yellow-400' },
+                                                                { bg: 'bg-purple-500', border: 'border-purple-500/30', text: 'text-purple-400' },
+                                                            ];
+                                                            const color = colors[i % colors.length];
+
+                                                            return (
+                                                                <div key={key} className={`bg-gray-900/50 border ${color.border} p-3 rounded-lg`}>
+                                                                    <div className="flex justify-between items-center mb-2">
+                                                                        <span className="text-xs text-gray-400 uppercase">{label}</span>
+                                                                        <span className={`text-sm font-bold ${color.text}`}>{value}</span>
+                                                                    </div>
+                                                                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                                                                        <motion.div
+                                                                            initial={{ width: 0 }}
+                                                                            animate={{ width: `${percentage}%` }}
+                                                                            transition={{ duration: 1, delay: i * 0.2 }}
+                                                                            className={`h-full ${color.bg} rounded-full shadow-[0_0_10px_currentColor]`}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Immediate Actions Recommended */}
+                                            {data.what_happens_next.immediate_actions_recommended?.length > 0 && (
+                                                <div className="bg-green-950/30 border border-green-500/30 p-4 rounded-lg">
+                                                    <h5 className="flex items-center gap-2 text-sm font-bold text-green-400 mb-3">
+                                                        <Zap className="w-4 h-4" />
+                                                        Immediate Actions Recommended
+                                                    </h5>
+                                                    <ul className="space-y-2">
+                                                        {data.what_happens_next.immediate_actions_recommended.map((action, i) => (
+                                                            <motion.li
+                                                                key={i}
+                                                                initial={{ opacity: 0, x: -10 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                transition={{ delay: i * 0.1 }}
+                                                                className="flex items-start gap-3 text-sm text-gray-300"
+                                                            >
+                                                                <CheckCircle className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                                                                <span>{action}</span>
+                                                            </motion.li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {/* Warning Signs to Watch */}
+                                            {data.what_happens_next.warning_signs_to_watch?.length > 0 && (
+                                                <div className="bg-yellow-950/20 border border-yellow-500/20 p-4 rounded-lg">
+                                                    <h5 className="flex items-center gap-2 text-sm font-bold text-yellow-400 mb-3">
+                                                        <Eye className="w-4 h-4" />
+                                                        Warning Signs to Watch
+                                                    </h5>
+                                                    <ul className="space-y-2">
+                                                        {data.what_happens_next.warning_signs_to_watch.map((sign, i) => (
+                                                            <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
+                                                                <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+                                                                <span>{sign}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+
+                                {/* 2. QUESTION: PORTALS */}
+                                {currentQuestion === 'PORTALS' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="bg-black/60 border border-green-500/40 p-6 rounded-xl flex flex-col items-center text-center gap-4 shadow-[0_0_20px_rgba(34,197,94,0.15)] mt-4"
+                                    >
+                                        <div className="p-3 bg-green-500/10 rounded-full animate-pulse">
+                                            <Globe className="w-8 h-8 text-green-500" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white">Find Complaint Portals?</h3>
+                                        <p className="text-gray-400 text-sm max-w-md">
+                                            Would you like to know which official websites you should go to and file the complaint?
+                                        </p>
+                                        <div className="flex gap-4 w-full max-w-xs mt-2">
+                                            <button
+                                                onClick={() => { setShowPortals(true); setCurrentQuestion('CALENDAR'); }}
+                                                className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition-all"
+                                            >
+                                                YES
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowPortals(false); setCurrentQuestion('CALENDAR'); }}
+                                                className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-lg transition-all"
+                                            >
+                                                NO
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* Official Complaint Channels (Conditionally Rendered) */}
+                                {showPortals && data.complaint_portals?.length > 0 && (
+                                    <div className="bg-gray-900/60 border border-green-500/30 p-5 rounded-xl backdrop-blur-sm relative overflow-hidden group mt-4">
+                                        <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity pointer-events-none">
+                                            <Globe className="w-16 h-16 text-green-500" />
+                                        </div>
+                                        <h4 className="flex items-center gap-2 text-sm font-bold text-green-400 uppercase tracking-widest mb-4 border-b border-gray-700 pb-3">
+                                            <ExternalLink className="w-4 h-4" />
+                                            Official Reporting Channels
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {data.complaint_portals.map((portal, idx) => (
+                                                <a
+                                                    key={idx}
+                                                    href={portal.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block bg-black/40 border border-green-500/20 hover:border-green-500/60 hover:bg-green-950/20 rounded-lg p-4 transition-all group/link relative z-10"
+                                                >
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="font-bold text-green-300 group-hover/link:text-green-400 text-sm truncate pr-2">
+                                                            {portal.name}
+                                                        </span>
+                                                        <ExternalLink className="w-3 h-3 text-green-600 group-hover/link:text-green-400 flex-shrink-0" />
+                                                    </div>
+                                                    {portal.description && (
+                                                        <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                                                            {portal.description}
+                                                        </p>
+                                                    )}
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 3. QUESTION: CALENDAR */}
+                                {currentQuestion === 'CALENDAR' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="bg-black/60 border border-blue-500/40 p-6 rounded-xl flex flex-col items-center text-center gap-4 shadow-[0_0_20px_rgba(59,130,246,0.15)] mt-4"
+                                    >
+                                        <div className="p-3 bg-blue-500/10 rounded-full animate-pulse">
+                                            <Calendar className="w-8 h-8 text-blue-500" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white">Schedule Calendar Reminder?</h3>
+                                        <p className="text-gray-400 text-sm max-w-md">
+                                            Would you like to schedule automatic follow-up reminders in your Google Calendar?
+                                        </p>
+                                        <div className="flex gap-4 w-full max-w-xs mt-2">
+                                            <button
+                                                onClick={() => setShowCalendar(true)}
+                                                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-all"
+                                            >
+                                                YES
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowCalendar(false); setCurrentQuestion('NONE'); }}
+                                                className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-lg transition-all"
+                                            >
+                                                NO
+                                            </button>
+                                        </div>
+
+                                        {/* Email Input Form */}
                                         <AnimatePresence>
-                                            {showRealistic && (
+                                            {showCalendar && (
                                                 <motion.div
                                                     initial={{ height: 0, opacity: 0 }}
                                                     animate={{ height: 'auto', opacity: 1 }}
-                                                    exit={{ height: 0, opacity: 0 }}
-                                                    className="overflow-hidden"
+                                                    className="w-full overflow-hidden mt-4"
                                                 >
-                                                    <div className="p-5 pt-0 space-y-3">
-                                                        {data.realistic_examples.map((ex, i) => (
-                                                            <div key={i} className="bg-blue-950/20 border border-blue-500/20 p-4 rounded-lg text-gray-300 text-sm leading-relaxed">
-                                                                <span className="text-blue-400 mr-2">{i + 1}.</span>
-                                                                {ex}
-                                                            </div>
-                                                        ))}
+                                                    <div className="flex flex-col gap-3">
+                                                        <input
+                                                            type="email"
+                                                            placeholder="Enter your email address"
+                                                            value={calendarEmail}
+                                                            onChange={(e) => setCalendarEmail(e.target.value)}
+                                                            className="bg-gray-900 border border-blue-500/30 rounded-lg p-3 text-white focus:border-blue-500 outline-none placeholder-gray-600"
+                                                        />
+                                                        <button
+                                                            onClick={handleSchedule}
+                                                            disabled={scheduleStatus === 'loading' || !calendarEmail}
+                                                            className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900/40 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            {scheduleStatus === 'loading' ? <Loader className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+                                                            {scheduleStatus === 'loading' ? 'SCHEDULING...' : 'CONFIRM SCHEDULE'}
+                                                        </button>
+                                                        {scheduleStatus === 'success' && (
+                                                            <p className="text-green-400 text-sm">✓ Reminders scheduled successfully!</p>
+                                                        )}
+                                                        {scheduleStatus === 'error' && (
+                                                            <p className="text-red-400 text-sm">✗ Failed to schedule. Try again.</p>
+                                                        )}
+                                                        {scheduleStatus === 'success' && (
+                                                            <button onClick={() => setCurrentQuestion('NONE')} className="text-gray-500 text-xs hover:text-white mt-2 underline">
+                                                                Continue to Finish
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>
-                                    </div>
+                                    </motion.div>
+                                )}
+
+                                {/* 4. END STATE: TERMINATED */}
+                                {currentQuestion === 'NONE' && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        className="text-center py-8 text-gray-500 text-sm font-mono"
+                                    >
+                                        &lt; ANALYSIS_SESSION_TERMINATED /&gt;
+                                    </motion.div>
                                 )}
 
                                 {/* Footer */}
