@@ -62,37 +62,19 @@ def receive_message():
 
             # Extract the reply text — customize based on your response structure
             # You can make this smarter later (e.g., format lists nicely)
-            # Format Law References
-            law_references = bot_data.get('law_reference', ['Not available'])
-            formatted_laws = []
-            for doc in law_references:
-                if isinstance(doc, dict):
-                    # Act/Section in Bold, Description in Italics on next line
-                    formatted_laws.append(f"⚖️ *{doc.get('act', '')} {doc.get('section', '')}*\n_{doc.get('description', '')}_")
-                else:
-                    formatted_laws.append(f"⚖️ {doc}")
-
             reply_text = (
-                f"🚨 *DETECTED CRIME* 🚨\n"
-                f"``` {bot_data.get('primary_category', 'Unknown').upper()} ```\n\n"
-                
-                f"🧐 _Reasoning_\n"
-                f"> {bot_data.get('reasoning', 'Unknown')}\n\n"
-                
-                f"� *REQUIRED DOCUMENTS*\n" +
+                f"🚨 *Detected Crime:* {bot_data.get('primary_category', 'Unknown')}\n\n"+
+                f"📋 *Reasoning:* {bot_data.get('reasoning', 'Unknown')}\n\n"+
+                f"📋 *Required Documents:*\n" +
                 "\n".join([f"• {doc}" for doc in bot_data.get('required_documents', ['Not available'])]) +
                 "\n\n" +
-                
-                f"🏛️ *GOV. SUBMISSIONS*\n" +
-                "\n".join([f"• {doc}" for doc in bot_data.get('gov_documents_to_submit', ['Not available'])]) +
+                f"📄 *Government Documents to Submit:*\n" +
+                "\n".join([f"• {doc}" for doc in bot_data.get('gov_documents_to_submit', ['Not available'])])+
+                f"📄 Realistic Examples:\n" +
+                "\n".join([f"• {doc}" for doc in bot_data.get('realistic_examples', ['Not available'])]) +
                 "\n\n" +
-                
-                f"� *REALISTIC EXAMPLES*\n" +
-                "\n".join([f"• _{doc}_" for doc in bot_data.get('realistic_examples', ['Not available'])]) +
-                "\n\n" +
-                
-                f"� *LAW REFERENCES*\n" +
-                "\n".join(formatted_laws)
+                f"📄 Law Reference:\n" +
+                "\n".join([f"• {doc}" for doc in bot_data.get('law_reference', ['Not available'])])
             )
 
             if bot_data.get("error"):
