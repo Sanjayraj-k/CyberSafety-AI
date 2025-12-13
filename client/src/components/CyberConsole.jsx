@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, AlertTriangle, FileText, Upload, CheckCircle, Info, Send, Loader, Terminal as TerminalIcon, Lock, Activity, Image as ImageIcon, Mic, Scale, Target } from 'lucide-react';
+import { Shield, AlertTriangle, FileText, Upload, CheckCircle, Info, Send, Loader, Terminal as TerminalIcon, Lock, Activity, Image as ImageIcon, Mic, Scale, Target, Clock, TrendingUp, Eye, Zap, AlertOctagon } from 'lucide-react';
 import Navbar from './Navbar';
 
 const CyberConsole = () => {
@@ -11,6 +11,7 @@ const CyberConsole = () => {
     const [error, setError] = useState(null);
     const [showRealistic, setShowRealistic] = useState(false);
     const [showLawRef, setShowLawRef] = useState(false);
+    const [showThreatPrediction, setShowThreatPrediction] = useState(true); // Default open for prominence
     const [activeTab, setActiveTab] = useState('text'); // 'text', 'image', 'audio'
 
     const handleFileChange = (e) => {
@@ -406,6 +407,180 @@ const CyberConsole = () => {
                                         {data.reasoning || "No reasoning provided."}
                                     </p>
                                 </div>
+
+                                {/* 🔥 What Happens Next - Threat Prediction */}
+                                {data.what_happens_next && (
+                                    <div className="bg-gradient-to-br from-red-950/40 via-orange-950/30 to-gray-900/60 border border-red-500/30 rounded-xl backdrop-blur-sm overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.1)]">
+                                        <button
+                                            onClick={() => setShowThreatPrediction(!showThreatPrediction)}
+                                            className="w-full flex items-center justify-between p-5 hover:bg-red-950/30 transition-colors"
+                                        >
+                                            <span className="flex items-center gap-3 text-sm font-bold text-red-400 uppercase tracking-widest">
+                                                <div className="p-2 bg-red-500/20 rounded-lg animate-pulse">
+                                                    <AlertOctagon className="w-5 h-5" />
+                                                </div>
+                                                🔮 What Will Happen Next?
+                                            </span>
+                                            <span className="text-red-400 text-lg">{showThreatPrediction ? '−' : '+'}</span>
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {showThreatPrediction && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    className="overflow-hidden"
+                                                >
+                                                    <div className="p-5 pt-0 space-y-5">
+
+                                                        {/* Attacker Next Steps */}
+                                                        {data.what_happens_next.attacker_next_steps?.length > 0 && (
+                                                            <div className="bg-black/40 border border-red-500/20 p-4 rounded-lg">
+                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-red-400 mb-3">
+                                                                    <Target className="w-4 h-4" />
+                                                                    Likely Next Steps by Attacker
+                                                                </h5>
+                                                                <ul className="space-y-2">
+                                                                    {data.what_happens_next.attacker_next_steps.map((step, i) => (
+                                                                        <motion.li
+                                                                            key={i}
+                                                                            initial={{ opacity: 0, x: -10 }}
+                                                                            animate={{ opacity: 1, x: 0 }}
+                                                                            transition={{ delay: i * 0.1 }}
+                                                                            className="flex items-start gap-3 text-sm text-gray-300"
+                                                                        >
+                                                                            <span className="text-red-500 mt-1">•</span>
+                                                                            <span>{step}</span>
+                                                                        </motion.li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Risk Timeline */}
+                                                        {data.what_happens_next.risk_timeline && Object.keys(data.what_happens_next.risk_timeline).length > 0 && (
+                                                            <div className="bg-black/40 border border-orange-500/20 p-4 rounded-lg">
+                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-orange-400 mb-4">
+                                                                    <Clock className="w-4 h-4" />
+                                                                    Risk Escalation Timeline
+                                                                </h5>
+                                                                <div className="space-y-3">
+                                                                    {data.what_happens_next.risk_timeline['24_hours'] && (
+                                                                        <div className="flex gap-3">
+                                                                            <div className="flex-shrink-0 w-16 px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-center">
+                                                                                <span className="text-xs font-bold text-yellow-400">24 HRS</span>
+                                                                            </div>
+                                                                            <p className="text-sm text-gray-300">{data.what_happens_next.risk_timeline['24_hours']}</p>
+                                                                        </div>
+                                                                    )}
+                                                                    {data.what_happens_next.risk_timeline['48_hours'] && (
+                                                                        <div className="flex gap-3">
+                                                                            <div className="flex-shrink-0 w-16 px-2 py-1 bg-orange-500/20 border border-orange-500/30 rounded text-center">
+                                                                                <span className="text-xs font-bold text-orange-400">48 HRS</span>
+                                                                            </div>
+                                                                            <p className="text-sm text-gray-300">{data.what_happens_next.risk_timeline['48_hours']}</p>
+                                                                        </div>
+                                                                    )}
+                                                                    {data.what_happens_next.risk_timeline['7_days'] && (
+                                                                        <div className="flex gap-3">
+                                                                            <div className="flex-shrink-0 w-16 px-2 py-1 bg-red-500/20 border border-red-500/30 rounded text-center">
+                                                                                <span className="text-xs font-bold text-red-400">7 DAYS</span>
+                                                                            </div>
+                                                                            <p className="text-sm text-gray-300">{data.what_happens_next.risk_timeline['7_days']}</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Risk Statistics */}
+                                                        {data.what_happens_next.risk_statistics && Object.keys(data.what_happens_next.risk_statistics).length > 0 && (
+                                                            <div className="bg-black/40 border border-purple-500/20 p-4 rounded-lg">
+                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-purple-400 mb-4">
+                                                                    <TrendingUp className="w-4 h-4" />
+                                                                    Risk Statistics
+                                                                </h5>
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    {Object.entries(data.what_happens_next.risk_statistics).map(([key, value], i) => {
+                                                                        const percentage = parseInt(value) || 0;
+                                                                        const label = key.replace(/_/g, ' ').replace('probability', '').trim();
+                                                                        const colors = [
+                                                                            { bg: 'bg-red-500', border: 'border-red-500/30', text: 'text-red-400' },
+                                                                            { bg: 'bg-orange-500', border: 'border-orange-500/30', text: 'text-orange-400' },
+                                                                            { bg: 'bg-yellow-500', border: 'border-yellow-500/30', text: 'text-yellow-400' },
+                                                                            { bg: 'bg-purple-500', border: 'border-purple-500/30', text: 'text-purple-400' },
+                                                                        ];
+                                                                        const color = colors[i % colors.length];
+
+                                                                        return (
+                                                                            <div key={key} className={`bg-gray-900/50 border ${color.border} p-3 rounded-lg`}>
+                                                                                <div className="flex justify-between items-center mb-2">
+                                                                                    <span className="text-xs text-gray-400 uppercase">{label}</span>
+                                                                                    <span className={`text-sm font-bold ${color.text}`}>{value}</span>
+                                                                                </div>
+                                                                                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                                                                                    <motion.div
+                                                                                        initial={{ width: 0 }}
+                                                                                        animate={{ width: `${percentage}%` }}
+                                                                                        transition={{ duration: 1, delay: i * 0.2 }}
+                                                                                        className={`h-full ${color.bg} rounded-full shadow-[0_0_10px_currentColor]`}
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Immediate Actions Recommended */}
+                                                        {data.what_happens_next.immediate_actions_recommended?.length > 0 && (
+                                                            <div className="bg-green-950/30 border border-green-500/30 p-4 rounded-lg">
+                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-green-400 mb-3">
+                                                                    <Zap className="w-4 h-4" />
+                                                                    Immediate Actions Recommended
+                                                                </h5>
+                                                                <ul className="space-y-2">
+                                                                    {data.what_happens_next.immediate_actions_recommended.map((action, i) => (
+                                                                        <motion.li
+                                                                            key={i}
+                                                                            initial={{ opacity: 0, x: -10 }}
+                                                                            animate={{ opacity: 1, x: 0 }}
+                                                                            transition={{ delay: i * 0.1 }}
+                                                                            className="flex items-start gap-3 text-sm text-gray-300"
+                                                                        >
+                                                                            <CheckCircle className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                                                                            <span>{action}</span>
+                                                                        </motion.li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Warning Signs to Watch */}
+                                                        {data.what_happens_next.warning_signs_to_watch?.length > 0 && (
+                                                            <div className="bg-yellow-950/20 border border-yellow-500/20 p-4 rounded-lg">
+                                                                <h5 className="flex items-center gap-2 text-sm font-bold text-yellow-400 mb-3">
+                                                                    <Eye className="w-4 h-4" />
+                                                                    Warning Signs to Watch
+                                                                </h5>
+                                                                <ul className="space-y-2">
+                                                                    {data.what_happens_next.warning_signs_to_watch.map((sign, i) => (
+                                                                        <li key={i} className="flex items-start gap-3 text-sm text-gray-300">
+                                                                            <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+                                                                            <span>{sign}</span>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
 
                                 {/* Law References - Collapsible */}
                                 {data.law_reference?.length > 0 && (
