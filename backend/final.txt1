@@ -129,114 +129,6 @@ question_answer_chain = create_stuff_documents_chain(rag_llm, rag_prompt)
 retriever = vector_index.as_retriever(search_kwargs={"k": 1})
 rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 
-# --- "What Will Happen Next?" Predictor Prompt ---
-threat_prediction_prompt = PromptTemplate(
-    input_variables=["complaint", "primary_category", "severity"],
-    template="""
-You are a Cybercrime Threat Intelligence Analyst with expertise in predicting attacker behavior patterns.
-
-Based on the user's complaint and the classified crime category, predict what will likely happen next.
-
-**COMPLAINT:**
-{complaint}
-
-**CLASSIFIED AS:** {primary_category}
-**SEVERITY:** {severity}
-
-**YOUR TASK:**
-Analyze the situation and provide:
-
-1. **Likely Next Steps by Attacker** - What the scammer/attacker will probably do next (3-5 specific actions)
-2. **Risk Escalation Timeline** - What could happen if the victim delays action (24h, 48h, 7 days)
-3. **Statistical Risk Assessment** - Estimated probabilities based on similar cybercrime patterns
-
-**OUTPUT FORMAT (STRICT JSON):**
-{{
-    "attacker_next_steps": [
-        "Specific action 1",
-        "Specific action 2",
-        "Specific action 3"
-    ],
-    "risk_timeline": {{
-        "24_hours": "What could happen in 24 hours",
-        "48_hours": "What could happen in 48 hours", 
-        "7_days": "What could happen in 7 days if no action taken"
-    }},
-    "risk_statistics": {{
-        "financial_loss_probability": "XX%",
-        "data_compromise_probability": "XX%",
-        "reputation_damage_probability": "XX%",
-        "escalation_probability": "XX%"
-    }},
-    "immediate_actions_recommended": [
-        "Action 1 to take immediately",
-        "Action 2 to take immediately",
-        "Action 3 to take immediately"
-    ],
-    "warning_signs_to_watch": [
-        "Sign 1 indicating escalation",
-        "Sign 2 indicating escalation"
-    ]
-}}
-
-Be specific and realistic based on actual cybercrime patterns. Use percentages that reflect real-world data for similar crimes.
-"""
-)
-
-# --- Threat Prediction Function ---
-def predict_threat_evolution(complaint: str, primary_category: str, severity: str) -> dict:
-    """Predicts what the attacker will likely do next based on the complaint analysis."""
-    try:
-        prompt = threat_prediction_prompt.format(
-            complaint=complaint if not complaint.startswith("IMAGE:") else "[Image evidence provided]",
-            primary_category=primary_category,
-            severity=severity
-        )
-        
-        response = llm.invoke([HumanMessage(content=prompt)])
-        prediction_output = response.content.strip()
-        
-        # Clean Markdown if present
-        if "```" in prediction_output:
-            match = re.search(r"```(json)?\n?(.*?)```", prediction_output, re.DOTALL)
-            if match:
-                prediction_output = match.group(2).strip()
-        
-        # Parse JSON
-        prediction = json.loads(prediction_output)
-        return {
-            "what_happens_next": {
-                "attacker_next_steps": prediction.get("attacker_next_steps", []),
-                "risk_timeline": prediction.get("risk_timeline", {}),
-                "risk_statistics": prediction.get("risk_statistics", {}),
-                "immediate_actions_recommended": prediction.get("immediate_actions_recommended", []),
-                "warning_signs_to_watch": prediction.get("warning_signs_to_watch", [])
-            }
-        }
-    except json.JSONDecodeError:
-        return {
-            "what_happens_next": {
-                "error": "Failed to generate threat prediction",
-                "attacker_next_steps": [],
-                "risk_timeline": {},
-                "risk_statistics": {},
-                "immediate_actions_recommended": ["Report to Cyber Crime Portal immediately", "Do not engage with the attacker", "Preserve all evidence"],
-                "warning_signs_to_watch": []
-            }
-        }
-    except Exception as e:
-        print(f"Prediction Error: {e}")
-        return {
-            "what_happens_next": {
-                "error": str(e),
-                "attacker_next_steps": [],
-                "risk_timeline": {},
-                "risk_statistics": {},
-                "immediate_actions_recommended": ["Report to Cyber Crime Portal immediately"],
-                "warning_signs_to_watch": []
-            }
-        }
-
 # --- Classification State Schema (from app.py) ---
 class ClassificationState(TypedDict):
     complaint: str
@@ -542,21 +434,13 @@ def classify_complaint():
         except json.JSONDecodeError:
             category_info = {"error": "Failed to parse category documentation"}
         
-        # Generate "What Will Happen Next?" Prediction
-        threat_prediction = predict_threat_evolution(
-            complaint=data,
-            primary_category=result["primary_category"],
-            severity=result["severity"]
-        )
-        
         # Combine responses
         response_data = {
             "primary_category": result["primary_category"],
             "possible_crimes": result["possible_crimes"],
             "severity": result["severity"],
             "reasoning": result["reasoning"],
-            **category_info,  # Merge RAG info
-            **threat_prediction  # Merge threat prediction
+            **category_info  # Merge RAG info
         }
         
         return jsonify(response_data)
@@ -567,7 +451,7 @@ def classify_complaint():
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "active", "crime_database": "100_categories", "rag_enabled": True, "threat_predictor": True})
+    return jsonify({"status": "active", "crime_database": "100_categories", "rag_enabled": True})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
