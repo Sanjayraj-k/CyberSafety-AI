@@ -1,5 +1,5 @@
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
@@ -10,33 +10,42 @@ import Footer from "./components/Footer";
 import CyberBackground from "./components/CyberBackground";
 import CyberConsole from "./components/CyberConsole";
 
+const LandingPage = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.scrollTo) {
+      setTimeout(() => {
+        document
+          .getElementById(location.state.scrollTo)
+          ?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [location]);
+
+  return (
+    <div className="min-h-screen bg-black text-green-500 font-mono relative">
+      <CyberBackground />
+      <div className="relative z-10">
+        <Navbar />
+
+        <main>
+          <section id="hero"><Hero /></section>
+          <section id="workflow"><Workflow /></section>
+          <section id="interfaces"><InterfaceModes /></section>
+          <Features />
+        </main>
+
+        <Footer />
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <Routes>
-      {/* Landing Page */}
-      <Route
-        path="/"
-        element={
-          <div className="min-h-screen bg-black text-green-500 font-mono selection:bg-green-500/30 relative">
-            <CyberBackground />
-
-            <div className="relative z-10">
-              <Navbar />
-
-              <main>
-                <Hero />
-                <Workflow />
-                <InterfaceModes />
-                <Features />
-              </main>
-
-              <Footer />
-            </div>
-          </div>
-        }
-      />
-
-      {/* Console Page */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/console" element={<CyberConsole />} />
     </Routes>
   );
