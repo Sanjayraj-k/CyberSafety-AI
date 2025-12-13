@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-white text-slate-900 font-sans;
+    background-image:
+      linear-gradient(to right, #f1f5f9 1px, transparent 1px),
+      linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+.tech-border {
+  @apply border border-slate-200;
+}
+
+.tech-card {
+  @apply bg-white tech-border relative hover:border-cyber-blue transition-colors duration-300;
+}
+
+.tech-card::before {
+  content: '';
+  @apply absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-slate-300 transition-colors duration-300;
+}
+
+.tech-card:hover::before {
+  @apply border-cyber-blue;
+}
+
+.tech-card::after {
+  content: '';
+  @apply absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-slate-300 transition-colors duration-300;
+}
+
+.tech-card:hover::after {
+  @apply border-cyber-blue;
+}
+
+.mono-tag {
+  @apply font-mono text-xs uppercase tracking-wider text-slate-500;
+}
