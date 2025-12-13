@@ -14,6 +14,11 @@ from groq import Groq
 from neo4j import GraphDatabase
 from langchain_community.vectorstores.neo4j_vector import Neo4jVector
 from langchain_openai import OpenAIEmbeddings
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+
 # Note: These are 'classic' imports, ensure they are compatible or update to latest LangChain
 # from langchain_classic.chains.retrieval import create_retrieval_chain
 # from langchain_classic.chains.combine_documents import create_stuff_documents_chain
@@ -23,6 +28,8 @@ from langchain_classic.chains.combine_documents import create_stuff_documents_ch
 from flask_cors import CORS
 # Import dataset for ingestion
 from proof import proof  # Assuming 'proof.py' is available with the dataset
+from datetime import datetime, timedelta
+
 
 load_dotenv()
 
@@ -36,6 +43,93 @@ NEO4J_PASSWORD = "Me53Ykd8C5XTYEAw5bd54xCp3oNf6cyzhfXyfL9z2Po"
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 EMBEDDING_MODEL = "openai/text-embedding-3-small"
+
+@app.route('/schedule', methods=['POST'])
+def schedule_event():
+    try:
+        data = request.json
+        email = data.get('email')
+        category = data.get('category')
+        severity = data.get('severity')
+
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+
+        events = schedule_followup_events(email, category, severity)
+        return jsonify({"message": "Events scheduled successfully", "events": events})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+SCOPES = ["https://www.googleapis.com/auth/calendar"]
+def get_calendar_credentials():
+    creds = None
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "credentials.json", SCOPES
+            )
+            creds = flow.run_local_server(port=0)
+
+        with open("token.json", "w") as token:
+            token.write(creds.to_json())
+
+    return creds
+
+
+FOLLOW_UP_RULES = {
+    "HIGH": {"time": "10:00", "title": "Urgent Cybercrime Complaint Follow-up"},
+    "MEDIUM": {"time": "11:00", "title": "Cybercrime Complaint Follow-up"},
+    "LOW": {"time": "15:00", "title": "Reminder: Cybercrime Complaint"}
+}
+
+
+def schedule_followup_events(email, category, severity):
+    creds = get_calendar_credentials()
+    service = build("calendar", "v3", credentials=creds)
+
+    rule = FOLLOW_UP_RULES.get(severity, FOLLOW_UP_RULES["MEDIUM"])
+    today = datetime.now()
+
+    events = []
+
+    for i in range(1, 5):
+        date = (today + timedelta(days=i)).strftime("%Y-%m-%d")
+
+        event = {
+            "summary": rule["title"],
+            "description": (
+                f"Crime Category: {category}\n"
+                "Action: Follow up on cybercrime complaint\n"
+                "Portal: https://www.cybercrime.gov.in"
+            ),
+            "start": {
+                "dateTime": f"{date}T{rule['time']}:00",
+                "timeZone": "Asia/Kolkata"
+            },
+            "end": {
+                "dateTime": f"{date}T{rule['time']}:30",
+                "timeZone": "Asia/Kolkata"
+            },
+            "attendees": [{"email": email}],
+            "reminders": {"useDefault": True}
+        }
+
+        created = service.events().insert(
+            calendarId="primary",
+            body=event,
+            sendUpdates="all"
+        ).execute()
+
+        events.append({
+            "date": date,
+            "calendar_link": created.get("htmlLink")
+        })
+
+    return events
 
 def ingest_documents_to_neo4j(documents):
     driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))

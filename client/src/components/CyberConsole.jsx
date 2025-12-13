@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, AlertTriangle, FileText, Upload, CheckCircle, Info, Send, Loader, Terminal as TerminalIcon, Lock, Activity, Image as ImageIcon, Mic, Scale, Target, Clock, TrendingUp, Eye, Zap, AlertOctagon, ExternalLink, Globe } from 'lucide-react';
+import { Shield, AlertTriangle, FileText, Upload, CheckCircle, Info, Send, Loader, Terminal as TerminalIcon, Lock, Activity, Image as ImageIcon, Mic, Scale, Target, Clock, TrendingUp, Eye, Zap, AlertOctagon, ExternalLink, Globe, Calendar } from 'lucide-react';
 import Navbar from './Navbar';
 
 const CyberConsole = () => {
@@ -16,7 +16,12 @@ const CyberConsole = () => {
     // Interactive Flow State
     const [showThreats, setShowThreats] = useState(false);
     const [showPortals, setShowPortals] = useState(false);
-    const [currentQuestion, setCurrentQuestion] = useState('THREATS'); // 'THREATS', 'PORTALS', 'NONE'
+    const [currentQuestion, setCurrentQuestion] = useState('THREATS'); // 'THREATS', 'PORTALS', 'CALENDAR', 'NONE'
+
+    // Calendar State
+    const [calendarEmail, setCalendarEmail] = useState('');
+    const [scheduleStatus, setScheduleStatus] = useState('idle');
+    const [showCalendar, setShowCalendar] = useState(false);
 
     const [activeTab, setActiveTab] = useState('text'); // 'text', 'image', 'audio'
 
@@ -25,6 +30,30 @@ const CyberConsole = () => {
         if (selectedFile) {
             setFile(selectedFile);
             setComplaint('');
+        }
+    };
+
+    const handleSchedule = async () => {
+        if (!calendarEmail) return;
+        setScheduleStatus('loading');
+        try {
+            const response = await fetch('http://localhost:5000/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: calendarEmail,
+                    category: data.primary_category,
+                    severity: data.severity
+                }),
+            });
+            const result = await response.json();
+            if (response.ok) {
+                setScheduleStatus('success');
+            } else {
+                setScheduleStatus('error');
+            }
+        } catch (error) {
+            setScheduleStatus('error');
         }
     };
 
@@ -65,6 +94,10 @@ const CyberConsole = () => {
                 // Reset Interaction Flow
                 setShowThreats(false);
                 setShowPortals(false);
+                setShowPortals(false);
+                setShowCalendar(false);
+                setCalendarEmail('');
+                setScheduleStatus('idle');
                 setCurrentQuestion('THREATS');
                 setLoading(false);
             }, 1000);
@@ -702,13 +735,13 @@ const CyberConsole = () => {
                                         </p>
                                         <div className="flex gap-4 w-full max-w-xs mt-2">
                                             <button
-                                                onClick={() => { setShowPortals(true); setCurrentQuestion('NONE'); }}
+                                                onClick={() => { setShowPortals(true); setCurrentQuestion('CALENDAR'); }}
                                                 className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition-all"
                                             >
                                                 YES
                                             </button>
                                             <button
-                                                onClick={() => { setShowPortals(false); setCurrentQuestion('NONE'); }}
+                                                onClick={() => { setShowPortals(false); setCurrentQuestion('CALENDAR'); }}
                                                 className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-lg transition-all"
                                             >
                                                 NO
@@ -753,7 +786,78 @@ const CyberConsole = () => {
                                     </div>
                                 )}
 
-                                {/* 3. END STATE: TERMINATED */}
+                                {/* 3. QUESTION: CALENDAR */}
+                                {currentQuestion === 'CALENDAR' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="bg-black/60 border border-blue-500/40 p-6 rounded-xl flex flex-col items-center text-center gap-4 shadow-[0_0_20px_rgba(59,130,246,0.15)] mt-4"
+                                    >
+                                        <div className="p-3 bg-blue-500/10 rounded-full animate-pulse">
+                                            <Calendar className="w-8 h-8 text-blue-500" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white">Schedule Calendar Reminder?</h3>
+                                        <p className="text-gray-400 text-sm max-w-md">
+                                            Would you like to schedule automatic follow-up reminders in your Google Calendar?
+                                        </p>
+                                        <div className="flex gap-4 w-full max-w-xs mt-2">
+                                            <button
+                                                onClick={() => setShowCalendar(true)}
+                                                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-all"
+                                            >
+                                                YES
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowCalendar(false); setCurrentQuestion('NONE'); }}
+                                                className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-lg transition-all"
+                                            >
+                                                NO
+                                            </button>
+                                        </div>
+
+                                        {/* Email Input Form */}
+                                        <AnimatePresence>
+                                            {showCalendar && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    className="w-full overflow-hidden mt-4"
+                                                >
+                                                    <div className="flex flex-col gap-3">
+                                                        <input
+                                                            type="email"
+                                                            placeholder="Enter your email address"
+                                                            value={calendarEmail}
+                                                            onChange={(e) => setCalendarEmail(e.target.value)}
+                                                            className="bg-gray-900 border border-blue-500/30 rounded-lg p-3 text-white focus:border-blue-500 outline-none placeholder-gray-600"
+                                                        />
+                                                        <button
+                                                            onClick={handleSchedule}
+                                                            disabled={scheduleStatus === 'loading' || !calendarEmail}
+                                                            className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900/40 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            {scheduleStatus === 'loading' ? <Loader className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+                                                            {scheduleStatus === 'loading' ? 'SCHEDULING...' : 'CONFIRM SCHEDULE'}
+                                                        </button>
+                                                        {scheduleStatus === 'success' && (
+                                                            <p className="text-green-400 text-sm">✓ Reminders scheduled successfully!</p>
+                                                        )}
+                                                        {scheduleStatus === 'error' && (
+                                                            <p className="text-red-400 text-sm">✗ Failed to schedule. Try again.</p>
+                                                        )}
+                                                        {scheduleStatus === 'success' && (
+                                                            <button onClick={() => setCurrentQuestion('NONE')} className="text-gray-500 text-xs hover:text-white mt-2 underline">
+                                                                Continue to Finish
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
+                                )}
+
+                                {/* 4. END STATE: TERMINATED */}
                                 {currentQuestion === 'NONE' && (
                                     <motion.div
                                         initial={{ opacity: 0 }}
