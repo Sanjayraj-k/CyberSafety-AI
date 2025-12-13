@@ -6,7 +6,6 @@ import { MousePointer2, ArrowRight } from 'lucide-react';
 const Hero = () => {
     const navigate = useNavigate();
 
-    // ✅ WhatsApp Business Redirect
     const handleWhatsAppRedirect = () => {
         const phoneNumber = "15551864905"; // +1 555 186 4905 (formatted)
         const message = encodeURIComponent(

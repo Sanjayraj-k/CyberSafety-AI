@@ -28,8 +28,8 @@ const Navbar = () => {
     return (
         <nav
             className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${scrolled
-                    ? "bg-black/95 border-green-900/50 backdrop-blur-md"
-                    : "bg-transparent border-transparent"
+                ? "bg-black/95 border-green-900/50 backdrop-blur-md"
+                : "bg-transparent border-transparent"
                 }`}
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -65,6 +65,12 @@ const Navbar = () => {
                                 {item.label}
                             </button>
                         ))}
+                        <Link
+                            to="/intel"
+                            className="h-16 px-6 text-sm font-bold font-mono tracking-widest text-green-500/70 hover:text-green-400 hover:bg-green-900/10 border-b-2 border-transparent hover:border-green-500 transition-all flex items-center"
+                        >
+                            INTEL_MAP
+                        </Link>
                     </div>
 
                     {/* Console Button */}

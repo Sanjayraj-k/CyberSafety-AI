@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, AlertTriangle, FileText, Upload, CheckCircle, Info, Send, Loader, Terminal as TerminalIcon, Lock, Activity, Image as ImageIcon, Mic } from 'lucide-react';
 import Navbar from './Navbar';
+import LocationIntel from './LocationIntel';
 
 const CyberConsole = () => {
     const [complaint, setComplaint] = useState('');
@@ -569,6 +570,10 @@ const CyberConsole = () => {
                                     </AnimatePresence>
                                 </div>
                             )}
+                            {/* Location Intel - NEW */}
+                            <div className="col-span-1 lg:col-span-2 mt-6">
+                                <LocationIntel caseType={data.primary_category} />
+                            </div>
                         </motion.div>
                     )}
                 </div>

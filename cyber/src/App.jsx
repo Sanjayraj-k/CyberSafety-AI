@@ -9,6 +9,7 @@ import Features from "./components/Features";
 import Footer from "./components/Footer";
 import CyberBackground from "./components/CyberBackground";
 import CyberConsole from "./components/CyberConsole";
+import LocationPage from "./components/LocationPage";
 
 const LandingPage = () => {
   const location = useLocation();
@@ -47,6 +48,7 @@ function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/console" element={<CyberConsole />} />
+      <Route path="/intel" element={<LocationPage />} />
     </Routes>
   );
 }
