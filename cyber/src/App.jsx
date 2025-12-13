@@ -1,27 +1,44 @@
-import React from 'react';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import Workflow from './components/Workflow';
-import InterfaceModes from './components/InterfaceModes';
-import Features from './components/Features';
-import Footer from './components/Footer';
-import CyberBackground from './components/CyberBackground';
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+
+import Navbar from "./components/Navbar";
+import Hero from "./components/Hero";
+import Workflow from "./components/Workflow";
+import InterfaceModes from "./components/InterfaceModes";
+import Features from "./components/Features";
+import Footer from "./components/Footer";
+import CyberBackground from "./components/CyberBackground";
+import CyberConsole from "./components/CyberConsole";
 
 function App() {
   return (
-    <div className="min-h-screen bg-black text-green-500 font-mono selection:bg-green-500/30 relative">
-      <CyberBackground />
-      <div className="relative z-10">
-        <Navbar />
-        <main>
-          <Hero />
-          <Workflow />
-          <InterfaceModes />
-          <Features />
-        </main>
-        <Footer />
-      </div>
-    </div>
+    <Routes>
+      {/* Landing Page */}
+      <Route
+        path="/"
+        element={
+          <div className="min-h-screen bg-black text-green-500 font-mono selection:bg-green-500/30 relative">
+            <CyberBackground />
+
+            <div className="relative z-10">
+              <Navbar />
+
+              <main>
+                <Hero />
+                <Workflow />
+                <InterfaceModes />
+                <Features />
+              </main>
+
+              <Footer />
+            </div>
+          </div>
+        }
+      />
+
+      {/* Console Page */}
+      <Route path="/console" element={<CyberConsole />} />
+    </Routes>
   );
 }
 

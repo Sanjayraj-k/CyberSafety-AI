@@ -1,8 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { MousePointer2, ArrowRight } from 'lucide-react';
 
 const Hero = () => {
+    const navigate = useNavigate();
     return (
         <section className="relative pt-32 pb-24 lg:pt-48 lg:pb-32 overflow-hidden bg-transparent border-b-4 border-green-900">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -40,7 +42,10 @@ const Hero = () => {
                             transition={{ delay: 0.3 }}
                             className="flex flex-wrap gap-4"
                         >
-                            <button className="px-8 py-4 bg-green-600 hover:bg-green-500 text-black font-mono text-sm tracking-wider flex items-center gap-3 group transition-all">
+                            <button
+                                onClick={() => navigate('/console')}
+                                className="px-8 py-4 bg-green-600 hover:bg-green-500 text-black font-mono text-sm tracking-wider flex items-center gap-3 group transition-all"
+                            >
                                 INITIATE_WEB_SESSION
                                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                             </button>
@@ -63,11 +68,12 @@ const Hero = () => {
                                 <div className="relative z-10 p-6 bg-black border border-green-500 shadow-[0_0_30px_rgba(0,255,65,0.15)] max-w-[240px]">
                                     <div className="flex gap-2 mb-4">
                                         <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                                        <div className="font-mono text-[10px] text-green-600">INCIDENT ID: #9921</div>
+                                        <div className="font-mono text-[10px] text-green-600">ISSUES: USER_ISSUES</div>
                                     </div>
                                     <div className="font-mono text-xs text-green-400 mb-2">{'>'} DETECTED: Phishing</div>
-                                    <div className="font-mono text-xs text-green-400 mb-2">{'>'} SOURCE: Email Gateway</div>
-                                    <div className="font-mono text-xs text-white">{'>'} ACTION: Execute SOP-99</div>
+                                    <div className="font-mono text-xs text-green-400 mb-2">{'>'} THREAT: High</div>
+                                    <div className="font-mono text-xs text-white">{'>'} REQ PROOFS: Docs,Snaps </div>
+                                    <div className="font-mono text-xs text-white">{'>'} EXAMPLES: Related Examples </div>
                                 </div>
 
                                 {/* Decorative Cursor */}

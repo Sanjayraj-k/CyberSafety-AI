@@ -12,7 +12,7 @@ export default {
       },
       colors: {
         cyber: {
-          blue: '#00FF41', // Matrix Green (renaming variable but keeping key for compatibility initially, or swapping value)
+          blue: '#00FF41',
           green: '#00FF41',
           dark: '#000000',
           grey: '#111111',

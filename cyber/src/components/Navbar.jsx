@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Shield, Terminal, Menu, X } from 'lucide-react';
+
 
 const Navbar = () => {
     const [scrolled, setScrolled] = useState(false);
@@ -20,10 +22,10 @@ const Navbar = () => {
                             <Shield size={20} />
                         </div>
                         <div className="flex flex-col">
-                            <span className="font-mono font-bold text-lg tracking-tight leading-none text-white">
+                            <span className="font-mono font-bold text-xl tracking-tight leading-none text-white">
                                 SENTINEL<span className="text-green-500">SOP</span>
                             </span>
-                            <span className="text-[10px] uppercase tracking-widest text-green-700 font-medium">
+                            <span className="text-xs uppercase tracking-widest text-green-700 font-medium">
                                 Incident Response Unit
                             </span>
                         </div>
@@ -35,7 +37,7 @@ const Navbar = () => {
                             <a
                                 key={item}
                                 href={`#${item.toLowerCase()}`}
-                                className="h-16 flex items-center px-6 text-xs font-bold font-mono tracking-widest text-green-500/70 hover:text-green-400 hover:bg-green-900/10 border-b-2 border-transparent hover:border-green-500 transition-all"
+                                className="h-16 flex items-center px-6 text-sm font-bold font-mono tracking-widest text-green-500/70 hover:text-green-400 hover:bg-green-900/10 border-b-2 border-transparent hover:border-green-500 transition-all"
                             >
                                 {item}
                             </a>
@@ -44,12 +46,12 @@ const Navbar = () => {
 
                     {/* Action Button */}
                     <div className="hidden md:flex items-center">
-                        <a
-                            href="#"
-                            className="h-10 px-6 bg-green-600 hover:bg-green-500 text-black text-xs font-bold font-mono tracking-widest flex items-center justify-center transition-colors clip-path-slant"
+                        <Link
+                            to="/console"
+                            className="h-10 px-6 bg-green-600 hover:bg-green-500 text-black text-sm font-bold font-mono tracking-widest flex items-center justify-center transition-colors clip-path-slant"
                         >
-                            LAUNCH_CONSOLE
-                        </a>
+                            SOLVE IT
+                        </Link>
                     </div>
                 </div>
             </div>
